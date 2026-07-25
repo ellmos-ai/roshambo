@@ -1,0 +1,29 @@
+Roshambo
+Copyright 2026 the Roshambo authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This project was built for the CockroachDB x AWS Hackathon ("Build with Agentic
+Memory", Cockroach Labs, managed by Devpost).
+
+This distribution depends on, but does not bundle, the following third-party
+components, each under its own license:
+
+  - Model Context Protocol Python SDK ("mcp")   -- MIT License
+    https://github.com/modelcontextprotocol/python-sdk
+  - psycopg (PostgreSQL adapter, used for the CockroachDB connection) -- LGPL-3.0
+    https://github.com/psycopg/psycopg
+  - boto3 / botocore (AWS SDK for Python)        -- Apache License 2.0
+    https://github.com/boto/boto3
+
+See pyproject.toml for the exact dependency set and version constraints.
+
+Optional integration, not bundled:
+
+  - cockroachlabs/cockroachdb-skills -- Apache License 2.0
+    https://github.com/cockroachlabs/cockroachdb-skills
+    Referenced in docs/skills.md as an additional, separately-installed skill
+    collection; not copied into this repository.
+
+The contents of this NOTICE file are for informational purposes only and do
+not modify the License.

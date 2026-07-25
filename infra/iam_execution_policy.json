@@ -1,0 +1,36 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "WriteLambdaLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:{{AWS_REGION}}:{{AWS_ACCOUNT_ID}}:log-group:/aws/lambda/roshambo-worker:*"
+    },
+    {
+      "Sid": "InvokeBedrockModels",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:{{AWS_REGION}}::foundation-model/amazon.titan-embed-text-v2:0",
+        "arn:aws:bedrock:{{AWS_REGION}}::foundation-model/{{WORKER_BEDROCK_MODEL_ID}}"
+      ]
+    },
+    {
+      "Sid": "ReadWriteArtifacts",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject"
+      ],
+      "Resource": "arn:aws:s3:::{{S3_BUCKET_NAME}}/*"
+    }
+  ]
+}

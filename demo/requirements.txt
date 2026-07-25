@@ -1,0 +1,6 @@
+# Demo-only dependencies, kept separate from pyproject.toml (shared/orchestrator-owned
+# file -- see CONTRACT.md). Install with: pip install -r demo/requirements.txt
+# Also needs the roshambo package itself importable, e.g. `pip install -e ".[aws]"`
+# from the repo root, or PYTHONPATH=src.
+fastapi>=0.110
+uvicorn[standard]>=0.29

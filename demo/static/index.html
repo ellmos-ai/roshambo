@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roshambo — the multi-agent coordinator</title>
+  <link rel="icon" type="image/png" href="/assets/roshambo-favicon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <img src="/assets/roshambo-mark-dark.png" alt="" class="logo-mark">
+        <div>
+          <h1>Roshambo</h1>
+          <p class="tagline">The multi-agent coordinator</p>
+        </div>
+      </div>
+      <div id="mode-banner" class="mode-banner mode-banner--hidden">
+        <span class="mode-banner-text">MOCK MODE — no live CockroachDB cluster connected. Example data only.</span>
+      </div>
+    </header>
+
+    <!-- Status Strip -->
+    <div class="status-strip">
+      <div class="status-swarm-id">
+        <span class="label">Swarm ID:</span>
+        <span id="swarm-id" class="value">—</span>
+      </div>
+      <div class="status-tiles">
+        <div class="tile">
+          <div class="tile-label">Agents</div>
+          <div class="tile-value" id="tile-agents">0</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label">Active Claims</div>
+          <div class="tile-value" id="tile-active-claims">0</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label">Trails</div>
+          <div class="tile-value" id="tile-trails">0</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label">Failures</div>
+          <div class="tile-value" id="tile-failures">0</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label">Facts</div>
+          <div class="tile-value" id="tile-facts">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Claims Panel -->
+    <section class="panel">
+      <h2>Active Claims</h2>
+      <div id="claims-container">
+        <table class="claims-table">
+          <thead>
+            <tr>
+              <th>Resource</th>
+              <th>System</th>
+              <th>Held by</th>
+              <th>Intent</th>
+              <th>Acquired</th>
+              <th>Expires</th>
+            </tr>
+          </thead>
+          <tbody id="claims-tbody">
+            <tr class="empty-state">
+              <td colspan="6">No active claims right now.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Recall Search Panel -->
+    <section class="panel">
+      <h2>Recall Search</h2>
+      <div class="search-controls">
+        <div class="search-inputs">
+          <input
+            type="text"
+            id="search-query"
+            placeholder="e.g. migrate billing schema"
+            class="search-input"
+          >
+          <button id="search-button" class="search-button">Search</button>
+        </div>
+        <div class="search-filters">
+          <div class="filter-group">
+            <label>
+              <input type="number" id="search-limit" min="1" max="50" value="5" class="search-limit">
+              results
+            </label>
+          </div>
+          <div class="filter-group outcomes">
+            <label>
+              <input type="checkbox" id="outcome-success" value="success" class="outcome-checkbox">
+              Success
+            </label>
+            <label>
+              <input type="checkbox" id="outcome-failure" value="failure" class="outcome-checkbox">
+              Failure
+            </label>
+            <label>
+              <input type="checkbox" id="outcome-abandoned" value="abandoned" class="outcome-checkbox">
+              Abandoned
+            </label>
+            <label>
+              <input type="checkbox" id="outcome-inconclusive" value="inconclusive" class="outcome-checkbox">
+              Inconclusive
+            </label>
+          </div>
+        </div>
+        <div id="search-error" class="search-error"></div>
+      </div>
+      <div id="recall-results" class="recall-results"></div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same branch/PR so pushes during review don't queue up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+
+  test:
+    name: test (py${{ matrix.python-version }}, no infra)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Matches pyproject.toml's requires-python (>=3.10) and classifiers (3.10-3.12)
+        # -- actually run all three rather than only claiming support for them.
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      # `live` needs a real CockroachDB cluster (see the test-live job below), `aws`
+      # needs real AWS/Bedrock credentials (never available in CI -- no cloud
+      # credentials are configured for this repository). Both marker classes skip
+      # cleanly on their own when the resource is missing (CONTRACT.md ground rule 5
+      # and each test module's docstring); deselecting them here just avoids spending
+      # CI minutes on tests that would only report "skipped" anyway.
+      - run: pytest -m "not live and not aws" -v
+
+  test-live:
+    name: test (live CockroachDB cluster)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+
+      # Plain `docker run`, not the declarative `services:` key: CockroachDB's image
+      # needs a command (`start-single-node --insecure`) rather than running its
+      # default entrypoint with no arguments, and `services:` containers in GitHub
+      # Actions cannot override the image's command. `latest-v25.4` tracks the same
+      # major.minor line verified locally against a real cluster (CockroachDB CCL
+      # v25.4.0) in docs/EVIDENCE-core.md / docs/EVIDENCE-aws.md, without pinning to
+      # one patch release that may age out of the registry.
+      - name: Start a single-node CockroachDB (insecure, ephemeral, CI-only)
+        run: |
+          docker run -d --name crdb -p 26257:26257 \
+            cockroachdb/cockroach:latest-v25.4 start-single-node --insecure
+          for i in $(seq 1 30); do
+            if docker exec crdb ./cockroach sql --insecure --execute="SELECT 1;" > /dev/null 2>&1; then
+              echo "CockroachDB is accepting connections"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "CockroachDB did not become ready in time" >&2
+              docker logs crdb
+              exit 1
+            fi
+            sleep 2
+          done
+          docker exec crdb ./cockroach sql --insecure --execute="CREATE DATABASE IF NOT EXISTS roshambo;"
+
+      # Schema application is not a separate step: tests/conftest.py's `schema_ready`
+      # fixture calls roshambo.db.apply_schema(cfg) once per session, idempotently, the
+      # first time any test needs a live connection.
+
+      - name: AWS lane -- live-cluster tests (hard gate; src/roshambo/aws/**, demo/**)
+        env:
+          ROSHAMBO_DSN: postgresql://root@127.0.0.1:26257/roshambo?sslmode=disable
+        run: pytest tests/test_aws_demo_collision.py -m live -v
+
+      # The following two steps run the other lanes' own live-marked tests too --
+      # useful signal, and this job already pays for spinning up the cluster -- but
+      # `continue-on-error: true` keeps a failure in a file this lane does not own
+      # from blocking this lane's own gate above. Known, reproducible, pre-existing
+      # findings as of 2026-07-25 against a fresh single-node cluster (see
+      # docs/HANDOFF.md and docs/EVIDENCE-aws.md for exact commands/output):
+      # `test_recall_actually_uses_the_vector_index` fails because the query planner
+      # chooses a primary-key point scan over the vector index for a very small,
+      # highly selective result set; `test_full_round_trip_through_call_tool` fails
+      # against `mcp` SDK 1.28.1 with `AttributeError: 'list' object has no attribute
+      # 'text'`, which looks like an SDK return-shape change since the test was
+      # written against the `mcp>=1.2` floor. Neither was introduced by this lane and
+      # neither is this lane's to fix.
+      - name: Core lane -- live-cluster tests (informational; schema/**, src/roshambo/{memory,leases,db}.py)
+        continue-on-error: true
+        env:
+          ROSHAMBO_DSN: postgresql://root@127.0.0.1:26257/roshambo?sslmode=disable
+        run: pytest tests/test_core_concurrency.py tests/test_core_leases.py tests/test_core_recall.py tests/test_core_schema.py -m live -v
+
+      - name: Interface lane -- live-cluster tests (informational; src/roshambo/mcp/**)
+        continue-on-error: true
+        env:
+          ROSHAMBO_DSN: postgresql://root@127.0.0.1:26257/roshambo?sslmode=disable
+        run: pytest tests/test_mcp_server.py -m live -v
+
+      - name: Stop CockroachDB
+        if: always()
+        run: docker rm -f crdb

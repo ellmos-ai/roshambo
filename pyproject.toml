@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "roshambo"
+version = "0.1.0"
+description = "Agentic memory fabric on CockroachDB: serializable leases and a distributed vector index, so agent swarms remember what was tried and how it ended."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["agents", "agentic-memory", "cockroachdb", "vector-search", "mcp", "multi-agent"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "psycopg[binary]>=3.2",
+]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.35"]
+mcp = ["mcp>=1.2"]
+dev = [
+    "pytest>=8.0",
+    "pytest-timeout>=2.3",
+    "ruff>=0.6",
+    "boto3>=1.35",
+    "mcp>=1.2",
+]
+
+[project.scripts]
+roshambo = "roshambo.cli:main"
+roshambo-mcp = "roshambo.mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/roshambo"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "live: requires a running CockroachDB cluster (ROSHAMBO_DSN must be set)",
+    "aws: requires AWS credentials and Bedrock model access",
+]
+timeout = 120
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

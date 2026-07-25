@@ -1,0 +1,64 @@
+# --- secrets & credentials (never commit) ---
+.env
+.env.*
+*.pem
+*.key
+credentials
+credentials.json
+config.local.json
+*.crt
+certs/
+service-account*.json
+
+# --- internal planning / non-public working files ---
+_wettbewerb/
+_intern/
+_archive/
+_archiv/
+Plan.txt
+AUFGABEN.txt
+BRIEFING*
+*BRIEFING*
+CORE.txt
+LOCK*.txt
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- node (demo app) ---
+node_modules/
+.next/
+out/
+
+# --- infra / terraform / aws sam ---
+.terraform/
+*.tfstate
+*.tfstate.*
+.aws-sam/
+samconfig.toml
+
+# --- editors & os ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- local data ---
+cockroach-data/
+*.db
+*.sqlite3
+tmp/
+_tmp/
