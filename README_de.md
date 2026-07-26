@@ -105,6 +105,80 @@ Projekt einzusetzen. Genau dieser Zwischenraum — in dem ein Agent des einen He
 wissen müsste, was ein Agent eines anderen Herstellers bereits versucht hat — ist der
 Raum, den Roshambo besetzt.
 
+## Koordination über geteilten Zustand statt über ein Protokoll
+
+Roshambo hat kein Nachrichtenformat, das zwei Agenten beide beherrschen müssten. Was ein
+Agent über einen anderen weiß, liest er aus der Datenbank. Das ist keine Lücke im Entwurf,
+sondern der Grund, warum es herstellerübergreifend funktioniert: **Ein Protokoll müssen
+beide Seiten sprechen; geteilten Zustand muss jede Seite nur lesen können.** Niemand muss
+sich mit irgendwem abstimmen.
+
+**Nachrichten sind davon nicht ausgeschlossen.** Eine Nachricht, die als Spalte in der
+Claim-Zeile steht, ist weiterhin geteilter Zustand. Das dateibasierte Team-Lock-Verfahren,
+das hier produktiv läuft, macht genau das schon vor — seine Lock-Vorlage führt ein Feld
+`Queue:` für wartende Agenten oder Folgeansprüche und ein Feld `Notes:` für „kurze
+Nachricht, Lessons Learned oder Übergabe". Man kann also Nachrichten haben, **ohne** ein
+Nachrichtenprotokoll zu haben. Roshambos Schema trägt heute `intent` am Claim und die
+Ausgänge in `trails`; eine Warteschlange und ein Notizfeld wären eine kleine Ergänzung
+einer bestehenden Tabelle, kein neuer Mechanismus.
+
+Daraus wird ein Werkzeug mit zwei Ausbaustufen:
+
+- **Agenten, die einander nie begegnet sind** — blankes `claim`/`release` plus `trails`.
+  Keine Absprache nötig; es funktioniert mit allem, was die Datenbank erreicht.
+- **Ein Team, das voneinander weiß** — dieselbe Tabelle, zusätzlich Warteschlange und
+  Notiz am Claim. Übergaben und „ich warte auf X" werden möglich.
+
+### Wer sperrt die Sperrdatei?
+
+Jede dateibasierte Sperre muss die Sperrdatei selbst schützen, und dieser Regress muss
+irgendwo enden. In der Dateiwelt endet er bei `O_EXCL`, einem atomaren Anlegen, das das
+Betriebssystem liefert. Unser eigenes Lock-Modul benennt die Grenze unmissverständlich:
+Atomare Claim-Vergabe über `O_EXCL` sei „das wettlaufsichere *ich nehme dieses
+Arbeitspaket*, das ein reines Dateiformat nicht leisten kann."
+
+Aber `O_EXCL` ist **lokal** atomar. Über einen synchronisierten Ordner hinweg gilt es
+nicht, und das ist hier nicht hypothetisch: Am 2026-07-23 hängten zwei Hosts an dasselbe
+gemeinsame Append-only-Log an, der Synchronisationsdienst konnte nicht zusammenführen und
+forkte stattdessen, und jede Forkkopie hielt eine eindeutige Zeile, die in der kanonischen
+Datei fehlte — ein klassischer Lost Update, von Hand zurückgemergt. Dokumentiert im
+Betriebsprotokoll dieses Systems
+(`AUFTRAG_ALLE-DESKTOP-APPS_KONFLIKTKOPIEN-WARTUNG_2026-07-27.md`); wir führen es als
+dokumentierten Vorfall an, nicht als eigene Messung für diese Einreichung.
+
+Mit einer Datenbank endet der Regress nicht nur tiefer, er entfällt.
+`INSERT … ON CONFLICT (swarm_id, resource)` auf den Primärschlüssel **ist** der
+gegenseitige Ausschluss, geliefert von der serialisierbaren Transaktion darunter. Es gibt
+keine „Sperre für die Claims-Tabelle", weil die Atomarität nicht im Werkzeug liegt —
+sondern eine Ebene darunter, in einer Schicht, die alle Beteiligten ohnehin erreichen, und
+sie gilt über Maschinengrenzen hinweg statt nur innerhalb einer.
+
+### Vergabe ist nicht Einhaltung — und wo Einhaltung erzwingbar ist
+
+Dasselbe Lock-Modul ist hier sorgfältig, und wir übernehmen seine Unterscheidung:
+`O_EXCL` „macht die *Vergabe* wettlaufsicher, nicht die *Einhaltung*." Roshambo erbt diese
+Unterscheidung, aber nicht gleichmäßig — und der Unterschied gehört genau benannt, weil er
+üblicherweise zu großzügig behauptet wird:
+
+- **Ressourcen außerhalb der Datenbank** — Dateien auf einer Platte, Cloud-Objekte, ein
+  Editorfenster. Hier ist ein Claim **beratend**. Kein Koordinator kann einen Prozess am
+  Schreiben hindern, und Roshambo tut nicht so, als könnte er es.
+- **Ressourcen innerhalb der Datenbank** — `trails`, `decisions`, und Nachrichten, falls
+  sie hinzukommen. Hier ist die Einhaltung **technisch erzwingbar**, weil Claim und
+  Ressource in derselben Transaktionsdomäne liegen: ein Constraint, ein Trigger oder ein
+  `WHERE EXISTS (SELECT 1 FROM claims WHERE … AND expires_at > now())` beim Schreiben
+  macht aus dem Ratschlag eine Regel. Das ist verfügbar, nicht gebaut — das aktuelle
+  Schema erzwingt es nicht. Käme je eine Teamnachrichten-Tabelle hinzu, gehörte sie wie
+  jede andere Ressource unter das Claiming, statt eine Ausnahme zu sein.
+
+### Reichweite, nicht Ersatz
+
+Dateibasierte Team-Locks sind **bewusst** auf ein System begrenzt: Sie koordinieren die
+Agenten einer Maschine und schließen andere Maschinen aus. Das ist keine Nachlässigkeit,
+sondern die ehrliche Konsequenz daraus, dass `O_EXCL` lokal atomar ist. Roshambo hebt
+genau diese Beschränkung auf. Es ersetzt das Dateiverfahren nicht, es erweitert dessen
+Reichweite von einem System auf beliebig viele.
+
 ## Warum CockroachDB
 
 Die zentrale Frage des Hackathons ist, ob CockroachDB eine bedeutsame,

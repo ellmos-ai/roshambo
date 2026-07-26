@@ -100,6 +100,77 @@ these tools side by side on the same project. That space between them — where 
 built by one vendor needs to know what an agent built by another vendor already tried —
 is the space Roshambo occupies.
 
+## Coordination through shared state, not through a protocol
+
+Roshambo has no message format that two agents must both implement. Everything one agent
+knows about another, it reads out of the database. That is not a gap in the design, it is
+the reason it works across vendors: **a protocol needs both sides to speak it; shared
+state only needs each side to be able to read it.** Nobody has to agree with anybody.
+
+**This does not exclude messages.** A message written as a column on a claim row is still
+shared state. The file-based team-lock procedure we run in production already works
+exactly that way — its lock template carries a `Queue:` field for waiting agents or
+follow-on claims, and a `Notes:` field for "a short message, lessons learned or a
+handover". So you can have messages without having a message protocol. Roshambo's schema
+today carries `intent` on a claim and outcomes in `trails`; a waiting queue and a note
+field would be a small addition to an existing table, not a new mechanism.
+
+That gives one tool at two levels:
+
+- **Agents that have never met** — bare `claim`/`release` plus `trails`. No agreement
+  needed; it works with anything that can reach the database.
+- **A team that knows about each other** — the same table, plus a queue and a note on the
+  claim. Handovers and "I am waiting for X" become possible.
+
+### Who locks the lock file?
+
+Any file-based lock has to protect the lock file itself, and that regress has to end
+somewhere. In the file world it ends at `O_EXCL`: an atomic create supplied by the
+operating system. Our own lock module states the boundary plainly — atomic claim
+assignment via `O_EXCL` is "the race-safe *I am taking this work package* that a pure
+file format cannot provide."
+
+But `O_EXCL` is atomic **locally**. Across a synchronised folder it does not hold, and
+that is not hypothetical here: on 2026-07-23 two hosts appended to the same shared
+append-only log, the sync service could not merge and forked it instead, and each fork
+held one unique line missing from the canonical file — a textbook lost update, merged
+back by hand. It is written up in this system's own operations log
+(`AUFTRAG_ALLE-DESKTOP-APPS_KONFLIKTKOPIEN-WARTUNG_2026-07-27.md`); we cite it as a
+documented incident rather than as something measured for this submission.
+
+With a database the regress does not merely end lower, it disappears.
+`INSERT … ON CONFLICT (swarm_id, resource)` against the primary key **is** the mutual
+exclusion, supplied by the serializable transaction underneath. There is no "lock for the
+claims table", because the atomicity does not live in the tool — it lives one layer below
+it, in a layer every participant already reaches, and it holds across machines rather
+than only within one.
+
+### Assignment is not observance — and where observance can be enforced
+
+The same lock module is careful about this and we keep its distinction: `O_EXCL` "makes
+the *assignment* race-safe, not the *observance*." Roshambo inherits that distinction,
+but not uniformly, and the difference is worth stating precisely because it is usually
+overclaimed:
+
+- **Resources outside the database** — files on a disk, cloud objects, an editor window.
+  Here a claim is **advisory**. No coordinator can stop a process from writing to a file,
+  and Roshambo does not pretend otherwise.
+- **Resources inside the database** — `trails`, `decisions`, and messages if they are
+  added. Here observance is **technically enforceable**, because the claim and the
+  resource sit in the same transaction domain: a constraint, a trigger, or a
+  `WHERE EXISTS (SELECT 1 FROM claims WHERE … AND expires_at > now())` on the write turns
+  the advice into a rule. This is available rather than built — the current schema does
+  not enforce it — and if a team-message table is ever added it should be claimed like
+  any other resource rather than made an exception.
+
+### Reach, not replacement
+
+File-based team locks are **deliberately** scoped to one system: they coordinate the
+agents of one machine and shut other machines out. That is not sloppiness, it is the
+honest consequence of `O_EXCL` being locally atomic. Roshambo lifts exactly that
+restriction. It does not replace the file approach; it extends its reach from one system
+to any number.
+
 ## Why CockroachDB
 
 The hackathon's central question is whether CockroachDB plays a meaningful,
