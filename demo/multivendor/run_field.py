@@ -41,8 +41,25 @@ HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent
 SRC_DIR = REPO_ROOT / "src"
 RSB_PY = HERE / "rsb.py"
-TASKS_MD = HERE / "TASKS.md"
-PROMPT_MD = HERE / "prompts" / "agent.md"
+STARMAP_DIR = HERE / "starmap"
+
+# Two joint projects have been run through this apparatus. The fieldkit one is textual
+# and was the first collision measurement; the starmap one renders, so its state can be
+# rebuilt at any commit and turned into a time-lapse.
+SCENARIOS = {
+    "fieldkit": {
+        "tasks": HERE / "TASKS.md",
+        "prompt": HERE / "prompts" / "agent.md",
+        "dirs": ("fieldkit", "tests"),
+        "git": False,
+    },
+    "starmap": {
+        "tasks": STARMAP_DIR / "TASKS.md",
+        "prompt": HERE / "prompts" / "starmap-agent.md",
+        "dirs": ("data/constellations", "starmap", "tests"),
+        "git": True,
+    },
+}
 
 # Stripped from every agent's environment. A third-party agent runtime ships its
 # context to its vendor, and these carry (or point at) the cluster credentials.
@@ -199,18 +216,65 @@ def write_launcher(
     return launcher
 
 
+def _init_repo(workspace: Path) -> None:
+    """Make the workspace a git repository with a known identity.
+
+    Deliberate rather than incidental: Codex creates a repository here on its own if
+    none exists, and the commits would then carry whatever global identity those agent
+    runtimes happen to inherit. The timeline is evidence, so its authorship has to be
+    ours to explain. Agents override the author per commit with their own id.
+    """
+    if not (workspace / ".git").exists():
+        subprocess.run(["git", "init", "--quiet", str(workspace)], check=True)  # noqa: S603
+    for key, value in (
+        ("user.name", "roshambo field run"),
+        ("user.email", "fieldrun@roshambo.invalid"),
+        ("commit.gpgsign", "false"),
+    ):
+        subprocess.run(  # noqa: S603
+            ["git", "-C", str(workspace), "config", key, value], check=True
+        )
+    (workspace / ".gitignore").write_text("_logs/\n__pycache__/\n*.pyc\n", encoding="utf-8")
+
+    # An opening commit, so the time-lapse starts on an empty sky rather than on
+    # whatever the first agent happened to finish first.
+    has_commits = subprocess.run(  # noqa: S603
+        ["git", "-C", str(workspace), "rev-parse", "--verify", "HEAD"],
+        capture_output=True,
+    )
+    if has_commits.returncode != 0:
+        subprocess.run(["git", "-C", str(workspace), "add", "-A"], check=True)  # noqa: S603
+        subprocess.run(  # noqa: S603
+            ["git", "-C", str(workspace), "commit", "--quiet", "-m", "an empty sky"],
+            check=True,
+        )
+
+
 def prepare_workspace(
-    workspace: Path, env: dict[str, str], swarm_id: str, interpreter: str | None = None
+    workspace: Path,
+    env: dict[str, str],
+    swarm_id: str,
+    interpreter: str | None = None,
+    scenario: str = "fieldkit",
 ) -> Path:
+    spec = SCENARIOS[scenario]
     workspace.mkdir(parents=True, exist_ok=True)
-    (workspace / "fieldkit").mkdir(exist_ok=True)
-    (workspace / "tests").mkdir(exist_ok=True)
+    for relative in spec["dirs"]:
+        (workspace / relative).mkdir(parents=True, exist_ok=True)
     (workspace / "_logs").mkdir(exist_ok=True)
 
-    shutil.copyfile(TASKS_MD, workspace / "TASKS.md")
+    shutil.copyfile(spec["tasks"], workspace / "TASKS.md")
+
+    if scenario == "starmap":
+        # The renderer travels with the workspace so the agents can check their own work
+        # against the same instrument the time-lapse will use later.
+        shutil.copyfile(STARMAP_DIR / "render.py", workspace / "render.py")
+
+    if spec["git"]:
+        _init_repo(workspace)
 
     index = workspace / "INDEX.md"
-    if not index.exists():
+    if scenario == "fieldkit" and not index.exists():
         index.write_text(
             "# roshambo-fieldkit — completed tasks\n\n"
             "Every agent appends one line here after finishing a task. Because they all\n"
@@ -222,13 +286,21 @@ def prepare_workspace(
     return write_launcher(workspace, env, swarm_id, interpreter)
 
 
-def render_prompt(agent_id: str, workspace: Path, launcher: Path, ttl: int) -> str:
-    template = PROMPT_MD.read_text(encoding="utf-8")
+def render_prompt(
+    agent_id: str,
+    workspace: Path,
+    launcher: Path,
+    ttl: int,
+    scenario: str = "fieldkit",
+    interpreter: str | None = None,
+) -> str:
+    template = SCENARIOS[scenario]["prompt"].read_text(encoding="utf-8")
     return (
         template.replace("{AGENT_ID}", agent_id)
         .replace("{WORKDIR}", str(workspace))
         .replace("{RSB}", str(launcher))
         .replace("{TTL}", str(ttl))
+        .replace("{PYTHON}", f'"{interpreter or sys.executable}"')
     )
 
 
@@ -250,6 +322,8 @@ def run_round(
     ttl: int,
     timeout: int,
     env: dict[str, str],
+    scenario: str = "fieldkit",
+    interpreter: str | None = None,
 ) -> list[Invocation]:
     child_env = agent_env(env)
     started: list[tuple[subprocess.Popen, Invocation]] = []
@@ -262,7 +336,7 @@ def run_round(
         vendor = VENDORS[key]
         agent_id = vendor.agent_id if instances == 1 else f"{vendor.agent_id}-{instance}"
         label = key if instances == 1 else f"{key}-{instance}"
-        prompt = render_prompt(agent_id, workspace, launcher, ttl)
+        prompt = render_prompt(agent_id, workspace, launcher, ttl, scenario, interpreter)
         log_path = workspace / "_logs" / f"round{round_index:02d}-{label}.log"
         handle = log_path.open("w", encoding="utf-8", errors="replace")
         record = Invocation(
@@ -337,6 +411,12 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--scenario",
+        default="fieldkit",
+        choices=sorted(SCENARIOS),
+        help="which joint project the agents build",
+    )
+    parser.add_argument(
         "--interpreter",
         default=None,
         help=(
@@ -363,7 +443,7 @@ def main(argv: list[str] | None = None) -> int:
             "get a writable root here; put the workspace somewhere else."
         )
 
-    launcher = prepare_workspace(workspace, env, args.swarm, args.interpreter)
+    launcher = prepare_workspace(workspace, env, args.swarm, args.interpreter, args.scenario)
 
     record = RunRecord(
         swarm_id=args.swarm,
@@ -374,6 +454,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"workspace: {workspace}")
     print(f"swarm:     {args.swarm}")
+    print(f"scenario:  {args.scenario}")
     print(f"agents:    {', '.join(keys)} x{args.instances} = {len(keys) * args.instances}/round")
     print(f"rounds:    {args.rounds} (ttl {args.ttl}s, timeout {args.timeout}s)")
 
@@ -388,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.ttl,
                 args.timeout,
                 env,
+                args.scenario,
+                args.interpreter,
             )
         )
         manifest = workspace / "_logs" / "run.json"
