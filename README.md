@@ -1,10 +1,19 @@
 # Roshambo
 
+[![Tests](https://img.shields.io/badge/Tests-73%20passed%20%7C%2045%20skipped-success.svg)](https://github.com/ellmos-ai/roshambo)
+[![Ecosystem](https://img.shields.io/badge/ellmos--ai-framework-blue.svg)](https://github.com/ellmos-ai)
+[![Umbrella](https://img.shields.io/badge/open--bricks-umbrella-teal.svg)](https://github.com/open-bricks)
+[![LLM-Ready](https://img.shields.io/badge/LLM-Ready-brightgreen.svg)](llms.txt)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+
 **the multi-agent coordinator**
 
 **[Deutsche Fassung / German version: README_de.md](README_de.md)**
 
 ![Roshambo mark: a teal triangle connected above a grey circle and a grey square on a dark background, converging on one point — one shape set apart as the winner](assets/roshambo-banner-v2.png)
+
+> [!NOTE]
+> **AI Agent Integration & LLM Discovery**: Roshambo provides native MCP integration (`roshambo-mcp`) and structured memory interfaces. Read [`llms.txt`](llms.txt) for machine-readable context, architectural details, and verification specifications.
 
 **Three agents throw at the same time. Exactly one wins.
 Not by luck — by a serializable transaction.**
@@ -14,10 +23,23 @@ the same time, and exactly one throw wins. That is the shape of the problem this
 project solves for agent swarms — except here, the winner is not decided by chance, it
 is decided by a serializable transaction in CockroachDB.
 
+```mermaid
+graph TD
+    SubagentA[Agent Alpha] -->|1. Claim Task Lease| RoshamboClient[Roshambo Core Client]
+    SubagentB[Agent Beta] -->|1. Claim Task Lease| RoshamboClient
+    RoshamboClient -->|Serializable Tx| CDB[(CockroachDB Cluster)]
+    CDB -->|Lease Granted| SubagentA
+    CDB -->|Conflict Error| SubagentB
+    SubagentA -->|2. Record Attempt Outcome| MemoryFabric[Negative Memory & Trails]
+    MemoryFabric -->|Embed via Titan V2| VectorIdx[Distributed Vector Index]
+    SubagentB -->|3. Query Prior Failures| VectorIdx
+```
+
 > Roshambo is a multi-agent coordinator. CockroachDB is the system of record:
 > serializable leases so two agents never claim the same work, and a distributed
 > vector index so an agent can ask, before it starts, "has anyone tried this — and
 > how did it end?"
+
 
 Roshambo's second characteristic, alongside coordination, is **negative memory**: it
 does not primarily store documents or conversations, it stores the *outcomes of

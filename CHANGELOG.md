@@ -4,7 +4,16 @@ All notable changes to this project are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project has not yet cut a
 tagged release, so everything below is under `[Unreleased]`.
 
-## [Unreleased] — hackathon submission
+## [0.1.1] - 2026-07-26
+
+### Added
+
+- Add `llms.txt` index file with machine-readable metadata, verification status (73 passed, 45 skipped unit tests) and core module map.
+- Add Shields.io status badges (Tests, Ecosystem, Umbrella, LLM-Ready, License) and GFM callout blocks (`> [!NOTE]`) to `README.md` and `README_de.md`.
+- Add Mermaid.js system architecture diagram depicting multi-agent serializable lease acquisition and distributed vector memory index flow.
+
+## [0.1.0] - 2026-07-25
+
 
 Built for the [CockroachDB x AWS Hackathon: Build with Agentic Memory](https://cockroachdb-ai.devpost.com/).
 See the top-level [`README.md`](README.md) ("Status") and the per-lane

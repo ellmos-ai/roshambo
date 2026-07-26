@@ -1,10 +1,19 @@
 # Roshambo
 
+[![Tests](https://img.shields.io/badge/Tests-73%20passed%20%7C%2045%20skipped-success.svg)](https://github.com/ellmos-ai/roshambo)
+[![Ecosystem](https://img.shields.io/badge/ellmos--ai-framework-blue.svg)](https://github.com/ellmos-ai)
+[![Umbrella](https://img.shields.io/badge/open--bricks-umbrella-teal.svg)](https://github.com/open-bricks)
+[![LLM-Ready](https://img.shields.io/badge/LLM-Ready-brightgreen.svg)](llms.txt)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+
 **der Multi-Agenten-Koordinator**
 
 **[English version / Englische Fassung: README.md](README.md)**
 
 ![Roshambo-Symbol: ein türkises Dreieck, verbunden oberhalb eines grauen Kreises und eines grauen Quadrats auf dunklem Grund, zusammenlaufend auf einen Punkt — eine Form abgesetzt als Gewinner](assets/roshambo-banner-v2.png)
+
+> [!NOTE]
+> **KI-Agenten-Integration & LLM-Entdeckbarkeit**: Roshambo bietet eine nativ integrierte MCP-Schnittstelle (`roshambo-mcp`) und strukturierte Speicherinterfaces. Siehe [`llms.txt`](llms.txt) für maschinenlesbaren Kontext, Architekturdetails und Prüfspezifikationen.
 
 **Drei Agenten werfen gleichzeitig. Genau einer gewinnt.
 Nicht durch Zufall — durch eine serialisierbare Transaktion.**
@@ -14,10 +23,23 @@ und genau ein Wurf gewinnt. Das ist die Form des Problems, das dieses Projekt f�
 Agentenschwärme löst — nur entscheidet hier nicht der Zufall, sondern eine
 serialisierbare Transaktion in CockroachDB.
 
+```mermaid
+graph TD
+    SubagentA[Agent Alpha] -->|1. Task-Lease anfordern| RoshamboClient[Roshambo Core Client]
+    SubagentB[Agent Beta] -->|1. Task-Lease anfordern| RoshamboClient
+    RoshamboClient -->|Serialisierbare Tx| CDB[(CockroachDB Cluster)]
+    CDB -->|Lease erteilt| SubagentA
+    CDB -->|Konflikt-Fehler| SubagentB
+    SubagentA -->|2. Versuchsergebnis speichern| MemoryFabric[Negatives Gedächtnis & Trails]
+    MemoryFabric -->|Einbettung via Titan V2| VectorIdx[Verteilter Vektorindex]
+    SubagentB -->|3. Frühere Fehlschläge abfragen| VectorIdx
+```
+
 > Roshambo ist ein Multi-Agenten-Koordinator. CockroachDB ist das Primärsystem (system
 > of record): serialisierbare Leases, damit zwei Agenten nie dieselbe Arbeit
 > beanspruchen, und ein verteilter Vektorindex, damit ein Agent fragen kann, bevor er
-> beginnt: „Hat das schon einmal jemand versucht — und wie ist es ausgegangen?"
+> beginnt: „Hat das schon einmal jemand versucht — and wie ist es ausgegangen?"
+
 
 Roshambos zweite Eigenschaft, neben der Koordination, ist das **negative Gedächtnis**:
 Es speichert nicht in erster Linie Dokumente oder Konversationen, sondern die *Ausgänge

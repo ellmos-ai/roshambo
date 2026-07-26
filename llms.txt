@@ -1,0 +1,41 @@
+# Roshambo - Multi-Agent Coordinator & Negative Memory Fabric
+
+> Roshambo is a multi-agent coordinator built on CockroachDB and AWS Bedrock: serializable leases so two agents never claim the same work, and a distributed vector index so an agent can recall earlier attempts and outcomes before starting.
+
+Last-checked: 2026-07-26
+Verification: 73 passed, 45 skipped (118 total pytest tests verified)
+
+## Overview
+
+- **Repository**: `ellmos-ai/roshambo`
+- **License**: Apache-2.0
+- **Python Version**: >= 3.10
+- **Database Backend**: CockroachDB (PostgreSQL wire-compatible with pgvector extension)
+- **Embedding Models**: Amazon Titan Text Embeddings V2 via AWS Bedrock (with local fallback embedder)
+
+## Core Modules
+
+- `roshambo.memory.Roshambo`: Primary Python client for lease management, memory store (`trails`, `facts`, `decisions`), and vector recall.
+- `roshambo.leases`: Serializable lease acquisition (`claim`, `release`, `heartbeat`, `who_has`).
+- `roshambo.mcp.server`: FastMCP server exposing lease and memory tools for AI agents.
+- `roshambo.aws.bedrock`: AWS Bedrock Titan embedding generator.
+
+## Key Features
+
+1. **Serializable Leases**: Atomic lease acquisition via `INSERT ... ON CONFLICT ... DO UPDATE` preventing multi-agent race conditions.
+2. **Negative Memory**: Stores outcome of failed and succeeded attempts so agents avoid re-running failing paths.
+3. **Vector Index**: 1024-dimensional vector embeddings with cosine similarity search scoped by `swarm_id`.
+4. **MCP Protocol**: Native MCP server interface (`roshambo-mcp`).
+
+## Usage & Commands
+
+```bash
+# Install package
+pip install -e .
+
+# Run test suite
+pytest
+
+# Start MCP Server
+roshambo-mcp
+```
