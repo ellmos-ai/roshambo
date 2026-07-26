@@ -4,6 +4,51 @@ All notable changes to this project are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project has not yet cut a
 tagged release, so everything below is under `[Unreleased]`.
 
+## [0.1.3] - 2026-07-27
+
+### Added
+
+- `demo/multivendor/`: apparatus for running coding agents from three different vendors
+  — Claude Code (Anthropic), Codex (OpenAI) and Antigravity (Google) — against one shared
+  task list, each in its own process and its own fresh session, coordinating through
+  nothing but the database. `rsb.py` is the front door they call, `run_field.py` starts
+  them, `collect_evidence.py` reads the result out of `audit_log`.
+- `demo/multivendor/PROTOCOL.md`: the counting rules, committed **before** any agent ran,
+  so the numbers could not be shaped after seeing the data. It also fixes what makes a
+  run inconclusive rather than successful, and carries a dated addendum disclosing the
+  one definition that had to be corrected.
+- `docs/EVIDENCE-multivendor.md`: the measured result. **13 cross-vendor contention
+  events** — thirteen times an agent from one vendor was refused work another vendor's
+  agent held, and was told who held it. 28 genuine collisions on task resources in total,
+  33 of 33 denials naming the holder, **0 defects**. The index serialization point is
+  reported separately (4 collisions), never summed in.
+- `demo/multivendor/fieldkit-run/`: what the three vendors actually built — twelve
+  helper functions and their tests, 44 tests, 44 passed. Kept verbatim and excluded from
+  ruff, because it is a record rather than a library.
+
+### Changed
+
+- `rsb.py` answers on stdout (`ROSHAMBO RESULT=GRANTED|DENIED|OK|NOOP|ERROR` as the first
+  line) rather than relying on exit codes. Measured reason: asked to run a script exiting
+  3 and report the code, the Antigravity agent reported 1. Each vendor drives a different
+  shell, and a missing command also exits non-zero, so "claim refused" and "your shell
+  could not find the wrapper" were the same signal. `roshambo.cli` is untouched — its
+  output contract is frozen in `CONTRACT.md`.
+- READMEs (both languages) now separate the two situations Roshambo covers: the
+  in-process demo is the acceptance test a reader can run with only a database
+  connection, and the three-vendor run is a demonstration, since repeating it needs
+  accounts with three model vendors.
+
+### Known limitations recorded
+
+- **A lease says nobody is working on something; it does not say the work still needs
+  doing.** Seen twice — once in the pilot, once in the measured run, where task 10 was
+  granted a second time after its first holder had finished and released, leaving a
+  duplicate line in the artifact's `INDEX.md`. Left in place rather than tidied.
+- `decide` has no CLI subcommand, so it was not exercised.
+- Three vendors, but **one machine**. Cross-machine coordination remains argued rather
+  than measured, as does anything involving AWS.
+
 ## [0.1.2] - 2026-07-26
 
 ### Added

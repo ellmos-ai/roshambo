@@ -2,7 +2,7 @@
 
 > Roshambo is a multi-agent coordinator built on CockroachDB and AWS Bedrock: serializable leases so two agents never claim the same work, and a distributed vector index so an agent can recall earlier attempts and outcomes before starting.
 
-Last-checked: 2026-07-26
+Last-checked: 2026-07-27
 Verification: 79 passed, 45 skipped (124 total pytest tests verified)
 
 ## Overview
@@ -50,6 +50,10 @@ python demo/run_story.py --beat 1
 
 # Measure the coordination claim: three concurrent workers, exactly one winner
 python demo/run_story.py --measure --rounds 10
+
+# Coordinate agents from three different vendors through the shell front door
+python demo/multivendor/run_field.py --workspace <dir outside this repo> --swarm <fresh id> --rounds 2 --instances 3 --ttl 120
+python demo/multivendor/collect_evidence.py --swarm <the same id> --ttl 120
 ```
 
 ## Evidence
@@ -61,8 +65,18 @@ Measured runs, not claims. Each file records what was executed and what was not:
   three concurrent workers produced exactly one winner and two correctly-attributed denials.
   Also records what did not work: with the offline lexical embedder the reworded query finds
   the prior failure at rank 3 unfiltered, rank 1 when filtered to failures.
+- `docs/EVIDENCE-multivendor.md`: coordination between agents from three different vendors
+  (Claude Code, Codex, Antigravity), each a separate process and session, coordinating only
+  through the database. 13 cross-vendor contention events, 28 genuine collisions on task
+  resources, 33 of 33 denials naming the holder, 0 defects; the index serialization point
+  counted separately. Counting rules committed before the run
+  (`demo/multivendor/PROTOCOL.md`). Records the pilot that produced zero collisions and why,
+  and that a lease says nobody is working on something rather than that it still needs doing.
+  What the three vendors built is kept verbatim in `demo/multivendor/fieldkit-run/`
+  (44 tests, 44 passed).
 - `docs/EVIDENCE-core.md`, `docs/EVIDENCE-aws.md`, `docs/EVIDENCE-iface.md`: per-lane runs.
 - `docs/screenshots/`: screenshots of the demo app live against the cloud cluster.
 
-Not yet exercised: Amazon Bedrock embeddings, real AWS Lambda invocations, S3 artifacts.
+Not yet exercised: Amazon Bedrock embeddings, real AWS Lambda invocations, S3 artifacts,
+`decide` from the CLI, and coordination across more than one machine.
 `recall()` is therefore not described as semantic anywhere in this repository.
