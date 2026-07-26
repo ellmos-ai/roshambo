@@ -82,6 +82,11 @@ class Collision:
 class Analysis:
     resource_class: str
     denials: int = 0
+    # Denials whose reason named somebody. Counted over *all* denials, not just the
+    # ones that became collisions: a collision already requires the named holder to
+    # match the live one, so counting it there would be a tautology dressed up as a
+    # measurement.
+    named_holder_denials: int = 0
     collisions: list[Collision] = field(default_factory=list)
     stale_denials: int = 0
     defects: list[dict] = field(default_factory=list)
@@ -171,6 +176,8 @@ def analyse(events: list[Event], ttl_seconds: int) -> dict[str, Analysis]:
         named = ""
         if event.reason and event.reason.startswith(HELD_BY):
             named = event.reason[len(HELD_BY) :].strip()
+        if named:
+            bucket.named_holder_denials += 1
 
         grant = last_grant.get(resource)
         if grant is None:
@@ -220,7 +227,7 @@ def summarise(analyses: dict[str, Analysis], counts: dict[str, int], ttl: int) -
             "cross_vendor_events": analysis.cross_vendor_events,
             "stale_denials": analysis.stale_denials,
             "defects": analysis.defects,
-            "informative_denials": len(analysis.collisions),
+            "denials_naming_a_holder": analysis.named_holder_denials,
             "pairs": [
                 {"denied": denied, "holder": holder, "count": n}
                 for (denied, holder), n in sorted(pairs.items(), key=lambda kv: -kv[1])
@@ -265,6 +272,9 @@ def render(summary: dict) -> str:
         lines.append(f"  cross-vendor events       {block['cross_vendor_events']}")
         lines.append(f"  stale denials (not counted){block['stale_denials']:>2}")
         lines.append(f"  defects (two live leases)  {len(block['defects'])}")
+        lines.append(
+            f"  denials naming a holder   {block['denials_naming_a_holder']} of {block['denials']}"
+        )
         for pair in block["pairs"]:
             lines.append(f"    {pair['denied']} was refused by {pair['holder']} x{pair['count']}")
         if block["resources"]:
