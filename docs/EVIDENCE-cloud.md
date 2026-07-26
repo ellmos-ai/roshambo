@@ -89,3 +89,105 @@ credential-less environment; both are commented in `tests/test_mcp_server.py`.
   i.e. lexical overlap only. The semantic claim remains open until the `aws`-marked test runs.
 - No load or scale statement beyond 20 concurrent claimants. Nothing larger was measured,
   so nothing larger is claimed.
+
+---
+
+# 2026-07-26 — independent re-run on a second host
+
+The run above was made on one machine. This section records an independent repeat on a
+different host, against the same cloud cluster, to establish that the numbers are a property
+of the code rather than of one developer's environment. Nothing was changed in the source
+tree to obtain them: the tree was at commit `6beacb0` with a clean working directory before
+and during the run.
+
+## Environment
+
+| | |
+|---|---|
+| Host | second workstation, Windows 11 Pro (build 10.0.26200) |
+| Cluster | the same CockroachDB Cloud **Basic** cluster, AWS `eu-central-1` (Frankfurt) |
+| Server version | `CockroachDB CCL v26.2.1 (x86_64-pc-linux-gnu, built 2026/05/21 21:07:32, go1.25.5)` |
+| Connection | PostgreSQL wire, `sslmode=verify-full` |
+| Client | Python 3.12.10, psycopg 3.3.4, pytest 9.1.1, `mcp` 1.28.1, boto3 1.43.56 |
+| Embedder | offline placeholder (no AWS credentials on this host either) |
+| Measured latency | `SELECT 1` round trip: min 39.8 ms, median 41.1 ms, max 98.9 ms |
+| Date of run | 2026-07-26 |
+
+The latency is roughly 2.5× the figure recorded for the first host (~15 ms). Same cluster,
+same region — the difference is the client's network path, not the database. It is recorded
+because the concurrency test's timing behaviour depends on it, and a reader comparing the two
+runs should not have to guess why one took longer.
+
+## Results
+
+Offline, i.e. no cluster required — every `live`-marked test skips:
+
+```
+python -m pytest tests/ -q
+73 passed, 45 skipped in 5.47s
+```
+
+Live, against the cloud cluster:
+
+```
+python -m pytest tests/ -m live -rs --timeout=600 -q
+45 passed, 1 skipped, 72 deselected in 93.84s (0:01:33)
+```
+
+Lint:
+
+```
+ruff check .        (ruff 0.16.0)
+All checks passed!
+```
+
+Both figures reproduce the first host exactly: 73 offline, 45 live. The three live numbers
+add up to the same total as before (45 + 1 + 72 = 118 = 73 + 45), so no test moved between
+markers and none was added or lost in between.
+
+The one skip is the expected one, and the run was made with `-rs` so the reason is on the
+record rather than inferred:
+
+```
+SKIPPED [1] tests\test_core_recall.py:345: embedder is not usable here:
+            NoCredentialsError: Unable to locate credentials
+```
+
+That is `test_recall_with_the_real_embedder` (`aws`-marked, `tests/test_core_recall.py:324`),
+which is still waiting for Bedrock credentials. The "what this run does NOT show" section
+above therefore applies unchanged: retrieval quality here is lexical, not semantic.
+
+## One environmental finding: the cluster CA has to be present per host
+
+Worth recording because it cost time and will cost it again otherwise.
+
+`sslmode=verify-full` makes libpq verify the server certificate against a root certificate,
+and with no `sslrootcert` in the connection string libpq looks in one hard-coded place — on
+Windows, `%APPDATA%\postgresql\root.crt`. On this host that file did not exist, so every
+connection failed before reaching the database:
+
+```
+root certificate file "…/postgresql/root.crt" does not exist
+```
+
+Two things that did **not** work, recorded so they are not retried:
+
+- `sslrootcert=system` → `SSL error: certificate verify failed`. The OpenSSL bundled with
+  `psycopg[binary]` on Windows does not resolve to the operating system's certificate store,
+  so "system" points at nothing usable.
+- Downgrading to `sslmode=require` does connect, and is the tempting shortcut — but it
+  disables certificate verification altogether. Numbers obtained that way would not be
+  comparable with the run above, which was made under `verify-full`. It was not used, and
+  no result in this document rests on it.
+
+What worked: fetch the cluster's CA chain from the cluster's own certificate endpoint
+(`https://cockroachlabs.cloud/clusters/<cluster-id>/cert`, unauthenticated — 2728 bytes, two
+PEM blocks, an ISRG root chain), store it outside the repository, and name it explicitly with
+`sslrootcert=<path>` appended to the DSN. Explicitly, and not by writing
+`%APPDATA%\postgresql\root.crt`: that path is libpq's host-global default and would silently
+change certificate validation for every other PostgreSQL client on the machine. A per-project
+file that one connection string points at is the smaller footprint.
+
+For anyone setting this up: the environment variable the suite reads is `ROSHAMBO_DSN`, and
+appending `&sslrootcert=/path/to/root.crt` to the DSN from the cluster console is the whole
+of the configuration. The certificate is not secret; the DSN it is appended to is.
