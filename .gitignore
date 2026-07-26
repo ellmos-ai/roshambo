@@ -56,6 +56,10 @@ samconfig.toml
 Thumbs.db
 desktop.ini
 
+# --- demo scratch state ---
+# demo/run_story.py --beat N carries the winner/lease/trail between runs in here.
+demo/.story-state.json
+
 # --- local data ---
 cockroach-data/
 *.db

@@ -278,7 +278,17 @@ function shortId(id) {
  */
 function badgeClassFor(framework) {
   const name = framework.toLowerCase();
-  return name.includes('aws') || name.includes('lambda') ? 'system-aws' : 'system-local';
+  if (name.includes('aws') || name.includes('lambda')) return 'system-aws';
+  // Everything that is not the AWS side gets a color derived from its own name, so a
+  // table holding three different runtimes reads as three systems instead of one
+  // repeated shade. Deterministic, so a framework keeps its color across polls and
+  // between the two tables.
+  const palette = ['system-local', 'system-alt-a', 'system-alt-b'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return palette[hash % palette.length];
 }
 
 // ============================================================================
@@ -483,9 +493,36 @@ function startPolling() {
 // ============================================================================
 
 /**
+ * Apply ?query=…&outcomes=…&limit=… from the address bar and run that search.
+ *
+ * Makes a recall result a link. Useful three ways: a beat of the demo can be
+ * reproduced without anyone typing into a box, a screenshot or recording of the
+ * search is repeatable, and a found trail can be handed to somebody else as a URL.
+ * Does nothing when there is no query parameter.
+ */
+function applySearchFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const query = params.get('query');
+  if (!query) return;
+
+  document.getElementById('search-query').value = query;
+
+  const limit = params.get('limit');
+  if (limit) document.getElementById('search-limit').value = limit;
+
+  const outcomes = (params.get('outcomes') || '').split(',').map((o) => o.trim()).filter(Boolean);
+  document.querySelectorAll('.outcome-checkbox').forEach((checkbox) => {
+    checkbox.checked = outcomes.includes(checkbox.value);
+  });
+
+  executeSearch();
+}
+
+/**
  * Initialize the app on page load.
  */
 document.addEventListener('DOMContentLoaded', () => {
   attachSearchListeners();
   startPolling();
+  applySearchFromUrl();
 });

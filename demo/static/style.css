@@ -25,6 +25,10 @@
   --aws-text: #e8a33d;
   --local-bg: #102a3a;
   --local-text: #5fb3d4;
+  --alt-a-bg: #2a1030;
+  --alt-a-text: #c58fd8;
+  --alt-b-bg: #10301c;
+  --alt-b-text: #6fc98d;
   --unknown-bg: #2a2a2a;
   --unknown-text: #888888;
 }
@@ -54,6 +58,10 @@
     --aws-text: #9a6a1a;
     --local-bg: #dcf0f8;
     --local-text: #1a6a8b;
+    --alt-a-bg: #f4e4fa;
+    --alt-a-text: #6b2a80;
+    --alt-b-bg: #e0f5e7;
+    --alt-b-text: #1f6b3a;
     --unknown-bg: #e8e8e8;
     --unknown-text: #666666;
   }
@@ -274,6 +282,16 @@ a:hover {
 .system-badge.system-local {
   background-color: var(--local-bg);
   color: var(--local-text);
+}
+
+.system-badge.system-alt-a {
+  background-color: var(--alt-a-bg);
+  color: var(--alt-a-text);
+}
+
+.system-badge.system-alt-b {
+  background-color: var(--alt-b-bg);
+  color: var(--alt-b-text);
 }
 
 .system-badge.system-unknown {

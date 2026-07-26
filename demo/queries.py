@@ -95,10 +95,12 @@ def recent_denials(cfg: RoshamboConfig, limit: int = 10) -> list[dict]:
             conn,
             """
             SELECT t.trail_id, t.agent_id, t.topic, t.evidence, t.detail, t.created_at,
-                   a.framework, a.host
+                   a.framework, a.host, h.framework
               FROM trails t
               LEFT JOIN agents a
                 ON a.swarm_id = t.swarm_id AND a.agent_id::STRING = t.agent_id
+              LEFT JOIN agents h
+                ON h.swarm_id = t.swarm_id AND h.agent_id::STRING = t.detail->>'held_by'
              WHERE t.swarm_id = %s AND t.outcome = 'abandoned'
              ORDER BY t.created_at DESC
              LIMIT %s
@@ -106,7 +108,17 @@ def recent_denials(cfg: RoshamboConfig, limit: int = 10) -> list[dict]:
             (cfg.swarm_id, limit),
         )
     denials = []
-    for trail_id, agent_id, topic, evidence, detail, created_at, framework, host in rows:
+    for (
+        trail_id,
+        agent_id,
+        topic,
+        evidence,
+        detail,
+        created_at,
+        framework,
+        host,
+        holder_framework,
+    ) in rows:
         detail = detail or {}
         denials.append(
             {
@@ -119,7 +131,11 @@ def recent_denials(cfg: RoshamboConfig, limit: int = 10) -> list[dict]:
                 "host": host,
                 "resource": detail.get("resource"),
                 "held_by": detail.get("held_by"),
-                "holder_framework": detail.get("holder_framework"),
+                # Resolved by join, not stored: a denied worker learns the holder's
+                # id and intent from `ClaimDenied`, but not which runtime that id
+                # belongs to. Looking it up here keeps the answer current instead of
+                # freezing whatever the loser could see at denial time.
+                "holder_framework": holder_framework,
                 "holder_intent": detail.get("holder_intent"),
             }
         )
