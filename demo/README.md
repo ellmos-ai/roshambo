@@ -75,6 +75,16 @@ so only `--lambda-mode local-simulate` was exercised end to end); see
 `docs/EVIDENCE-aws.md` for the exact commands, output, and an honest account
 of which side won in each run (it is not rigged -- both sides can win).
 
+### Collisions between agents from different vendors
+
+Everything above runs inside this repository's own processes. For the same
+collision between **Claude Code, OpenAI's Codex and Google's Antigravity** --
+separate processes, separate sessions, three different vendors, coordinating
+through nothing but the database -- see [`multivendor/`](multivendor/). That run
+needs accounts with three model vendors, so it is a demonstration rather than a
+test you are expected to repeat; the measured result is in
+`docs/EVIDENCE-multivendor.md`, counting rules committed before the agents ran.
+
 ## Modes
 
 Every API response carries a `"mode"` field:
