@@ -315,6 +315,33 @@ URL kann das nicht. Deployt wurde sie nicht (es ist noch kein AWS-Konto angebund
 verifiziert ist, dass der Handler Function-URL-förmige Events beantwortet, samt
 Binärdateien und Query-Strings (`tests/test_demo_lambda_entry.py`).
 
+### Ein Werkzeug, zwei Situationen
+
+Roshambo koordiniert ein Team, dessen Mitglieder voneinander wissen — und Agenten, die
+einander nie begegnet sind. Das Zweite baut kein Hersteller für die Agenten der
+Konkurrenz, und beides wird bewusst unterschiedlich belegt:
+
+**Ein Team in einem Prozess — der Test, den Sie selbst laufen lassen können.** Alles
+oben lässt drei Agenten-Laufzeiten innerhalb eines Prozesses gegen einen echten Cluster
+antreten. Nötig ist eine Datenbankverbindung und sonst nichts: keine Modell-API-Schlüssel,
+keine Herstellerkonten. Genau das macht es zum Abnahmetest statt zur Erzählung — wer
+dieses Repository bewertet, kann ihn ausführen.
+
+**Fremde über drei Hersteller hinweg — der Lauf, den wir gemacht haben.** Claude Code,
+OpenAIs Codex und Googles Antigravity, jeder in einem eigenen Betriebssystemprozess und
+einer eigenen frischen Sitzung, bekamen dieselbe geordnete Aufgabenliste und die Anweisung,
+die erste noch offene Aufgabe zu nehmen. Sie teilen weder Speicher noch Nachrichtenkanal
+noch Dateizugriff; was einer über den anderen weiß, hat er aus der Datenbank. Es kam zu
+echten Kollisionen, der Audit-Log hält fest, wer von wem abgewiesen wurde, und am Ende
+stand ein kleines Python-Paket.
+
+Den zweiten Fall nachzustellen erfordert Konten bei drei verschiedenen Modellanbietern —
+er wird deshalb als Vorführung angeboten, nicht als Hausaufgabe. Der Apparat liegt in
+[`demo/multivendor/`](demo/multivendor/), das gemessene Ergebnis samt eines ersten
+Versuchs, der überhaupt keine Kollisionen erzeugte, und der Begründung dafür steht in
+[`docs/EVIDENCE-multivendor.md`](docs/EVIDENCE-multivendor.md). Die Zählregeln wurden
+committet, bevor die Agenten liefen.
+
 ## Konfiguration
 
 Alles wird aus der Umgebung unter dem Präfix `ROSHAMBO_` gelesen (`src/roshambo/config.py`),

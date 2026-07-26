@@ -304,6 +304,31 @@ do. It has not been deployed (no AWS account is attached yet); what is verified 
 the handler answers Function-URL-shaped events, binary assets and query strings included
 (`tests/test_demo_lambda_entry.py`).
 
+### One tool, two situations
+
+Roshambo coordinates a team whose members know about each other, and it coordinates
+agents that have never met. The second is the one no vendor builds for its competitors,
+and the two are demonstrated differently on purpose:
+
+**A team, in one process — the test you can run.** Everything above races three agent
+runtimes inside a single process against a real cluster. It needs a database connection
+and nothing else: no model API keys, no vendor accounts. That is what makes it the
+acceptance test rather than a story — anyone judging this repository can run it.
+
+**Strangers, across three vendors — the run we did.** Claude Code, OpenAI's Codex and
+Google's Antigravity, each in its own operating-system process and its own fresh
+session, were given the same ordered task list and told to take the first task that was
+not done. They share no memory, no message bus and no file handle; everything one knows
+about another it learned from the database. Real collisions followed, the audit log
+recorded who was refused by whom, and a small Python package came out the other end.
+
+Reproducing the second one needs accounts with three separate model vendors, so it is
+offered as a demonstration rather than as homework. The apparatus is in
+[`demo/multivendor/`](demo/multivendor/) and the measured result — including a first
+attempt that produced no collisions at all, and why — is in
+[`docs/EVIDENCE-multivendor.md`](docs/EVIDENCE-multivendor.md). The counting rules were
+committed before the agents ran.
+
 ## Configuration
 
 Everything is read from the environment under the `ROSHAMBO_` prefix
