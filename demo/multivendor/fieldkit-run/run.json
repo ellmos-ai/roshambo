@@ -1,0 +1,206 @@
+{
+  "swarm_id": "fieldrun-2026-07-27",
+  "ttl": 120,
+  "started_at": "2026-07-26T22:53:51.725707+00:00",
+  "rounds": 2,
+  "invocations": [
+    {
+      "round_index": 1,
+      "key": "claude-1",
+      "agent_id": "claude-code-1",
+      "vendor": "anthropic",
+      "started_at": "2026-07-26T22:53:51.753280+00:00",
+      "ended_at": "2026-07-26T23:03:48.965939+00:00",
+      "exit_code": 0,
+      "log": "round01-claude-1.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 1,
+      "key": "codex-1",
+      "agent_id": "codex-1",
+      "vendor": "openai",
+      "started_at": "2026-07-26T22:53:51.780564+00:00",
+      "ended_at": "2026-07-26T22:59:41.951062+00:00",
+      "exit_code": 0,
+      "log": "round01-codex-1.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 1,
+      "key": "agy-1",
+      "agent_id": "agy-1",
+      "vendor": "google",
+      "started_at": "2026-07-26T22:53:51.817154+00:00",
+      "ended_at": "2026-07-26T23:00:18.643612+00:00",
+      "exit_code": 0,
+      "log": "round01-agy-1.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 1,
+      "key": "claude-2",
+      "agent_id": "claude-code-2",
+      "vendor": "anthropic",
+      "started_at": "2026-07-26T22:53:51.927606+00:00",
+      "ended_at": "2026-07-26T23:01:18.701677+00:00",
+      "exit_code": 0,
+      "log": "round01-claude-2.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 1,
+      "key": "codex-2",
+      "agent_id": "codex-2",
+      "vendor": "openai",
+      "started_at": "2026-07-26T22:53:51.989829+00:00",
+      "ended_at": "2026-07-26T22:54:22.106366+00:00",
+      "exit_code": 1,
+      "log": "round01-codex-2.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 1,
+      "key": "agy-2",
+      "agent_id": "agy-2",
+      "vendor": "google",
+      "started_at": "2026-07-26T22:53:52.018848+00:00",
+      "ended_at": "2026-07-26T22:59:30.720876+00:00",
+      "exit_code": 0,
+      "log": "round01-agy-2.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 1,
+      "key": "claude-3",
+      "agent_id": "claude-code-3",
+      "vendor": "anthropic",
+      "started_at": "2026-07-26T22:53:52.075847+00:00",
+      "ended_at": "2026-07-26T23:03:14.851175+00:00",
+      "exit_code": 0,
+      "log": "round01-claude-3.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 1,
+      "key": "codex-3",
+      "agent_id": "codex-3",
+      "vendor": "openai",
+      "started_at": "2026-07-26T22:53:52.152359+00:00",
+      "ended_at": "2026-07-26T22:59:43.990857+00:00",
+      "exit_code": 0,
+      "log": "round01-codex-3.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 1,
+      "key": "agy-3",
+      "agent_id": "agy-3",
+      "vendor": "google",
+      "started_at": "2026-07-26T22:53:52.174983+00:00",
+      "ended_at": "2026-07-26T22:59:39.913196+00:00",
+      "exit_code": 0,
+      "log": "round01-agy-3.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "claude-1",
+      "agent_id": "claude-code-1",
+      "vendor": "anthropic",
+      "started_at": "2026-07-26T23:03:49.190909+00:00",
+      "ended_at": "2026-07-26T23:13:09.217062+00:00",
+      "exit_code": 0,
+      "log": "round02-claude-1.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "codex-1",
+      "agent_id": "codex-1",
+      "vendor": "openai",
+      "started_at": "2026-07-26T23:03:49.379269+00:00",
+      "ended_at": "2026-07-26T23:09:09.776922+00:00",
+      "exit_code": 0,
+      "log": "round02-codex-1.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "agy-1",
+      "agent_id": "agy-1",
+      "vendor": "google",
+      "started_at": "2026-07-26T23:03:49.392883+00:00",
+      "ended_at": "2026-07-26T23:13:10.759707+00:00",
+      "exit_code": 0,
+      "log": "round02-agy-1.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "claude-2",
+      "agent_id": "claude-code-2",
+      "vendor": "anthropic",
+      "started_at": "2026-07-26T23:03:49.569881+00:00",
+      "ended_at": "2026-07-26T23:09:56.941995+00:00",
+      "exit_code": 0,
+      "log": "round02-claude-2.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "codex-2",
+      "agent_id": "codex-2",
+      "vendor": "openai",
+      "started_at": "2026-07-26T23:03:49.585965+00:00",
+      "ended_at": "2026-07-26T23:10:13.879950+00:00",
+      "exit_code": 0,
+      "log": "round02-codex-2.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "agy-2",
+      "agent_id": "agy-2",
+      "vendor": "google",
+      "started_at": "2026-07-26T23:03:49.602464+00:00",
+      "ended_at": "2026-07-26T23:14:04.911658+00:00",
+      "exit_code": 1,
+      "log": "round02-agy-2.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "claude-3",
+      "agent_id": "claude-code-3",
+      "vendor": "anthropic",
+      "started_at": "2026-07-26T23:03:49.616302+00:00",
+      "ended_at": "2026-07-26T23:12:38.266459+00:00",
+      "exit_code": 0,
+      "log": "round02-claude-3.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "codex-3",
+      "agent_id": "codex-3",
+      "vendor": "openai",
+      "started_at": "2026-07-26T23:03:49.629370+00:00",
+      "ended_at": "2026-07-26T23:10:35.983835+00:00",
+      "exit_code": 0,
+      "log": "round02-codex-3.log",
+      "timed_out": false
+    },
+    {
+      "round_index": 2,
+      "key": "agy-3",
+      "agent_id": "agy-3",
+      "vendor": "google",
+      "started_at": "2026-07-26T23:03:49.642621+00:00",
+      "ended_at": "2026-07-26T23:12:35.194389+00:00",
+      "exit_code": 0,
+      "log": "round02-agy-3.log",
+      "timed_out": false
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "ttl_seconds": 120,
+  "counts": {
+    "trails": 11,
+    "trail_failures": 0,
+    "audit_rows": 105,
+    "distinct_agents": 9
+  },
+  "task_resources": {
+    "denials": 33,
+    "genuine_collisions": 28,
+    "contention_events": 28,
+    "cross_vendor_collisions": 13,
+    "cross_vendor_events": 13,
+    "stale_denials": 5,
+    "defects": [],
+    "denials_naming_a_holder": 33,
+    "pairs": [
+      {
+        "denied": "codex-1",
+        "holder": "claude-code-3",
+        "count": 2
+      },
+      {
+        "denied": "codex-3",
+        "holder": "claude-code-3",
+        "count": 2
+      },
+      {
+        "denied": "claude-code-2",
+        "holder": "claude-code-3",
+        "count": 2
+      },
+      {
+        "denied": "agy-3",
+        "holder": "agy-2",
+        "count": 2
+      },
+      {
+        "denied": "agy-1",
+        "holder": "agy-2",
+        "count": 2
+      },
+      {
+        "denied": "agy-1",
+        "holder": "agy-3",
+        "count": 2
+      },
+      {
+        "denied": "claude-code-2",
+        "holder": "claude-code-1",
+        "count": 2
+      },
+      {
+        "denied": "codex-3",
+        "holder": "codex-1",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "agy-2",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-2",
+        "holder": "agy-2",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "agy-3",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-2",
+        "holder": "agy-3",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-3",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "codex-3",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "codex-1",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "codex-2",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-2",
+        "holder": "codex-3",
+        "count": 1
+      },
+      {
+        "denied": "codex-1",
+        "holder": "codex-3",
+        "count": 1
+      },
+      {
+        "denied": "codex-2",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "codex-2",
+        "holder": "codex-3",
+        "count": 1
+      }
+    ],
+    "resources": [
+      "fieldkit:task:01",
+      "fieldkit:task:02",
+      "fieldkit:task:04",
+      "fieldkit:task:05",
+      "fieldkit:task:07",
+      "fieldkit:task:08",
+      "fieldkit:task:09",
+      "fieldkit:task:10",
+      "fieldkit:task:11",
+      "fieldkit:task:12"
+    ]
+  },
+  "index_resource": {
+    "denials": 4,
+    "genuine_collisions": 4,
+    "contention_events": 4,
+    "cross_vendor_collisions": 1,
+    "cross_vendor_events": 1,
+    "stale_denials": 0,
+    "defects": [],
+    "denials_naming_a_holder": 4,
+    "pairs": [
+      {
+        "denied": "agy-1",
+        "holder": "agy-3",
+        "count": 1
+      },
+      {
+        "denied": "codex-3",
+        "holder": "agy-1",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "agy-3",
+        "holder": "agy-2",
+        "count": 1
+      }
+    ],
+    "resources": [
+      "fieldkit:index"
+    ]
+  },
+  "other_resources": {
+    "denials": 0,
+    "genuine_collisions": 0,
+    "contention_events": 0,
+    "cross_vendor_collisions": 0,
+    "cross_vendor_events": 0,
+    "stale_denials": 0,
+    "defects": [],
+    "denials_naming_a_holder": 0,
+    "pairs": [],
+    "resources": []
+  }
+}

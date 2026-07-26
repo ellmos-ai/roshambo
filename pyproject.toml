@@ -54,6 +54,12 @@ timeout = 120
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Kept verbatim, deliberately unlinted: this directory holds code written by agents
+# from three different vendors during the multi-vendor field run. It is a record of
+# what they produced, not code this project maintains -- reformatting it would
+# falsify the record. Its own tests are run and reported separately in
+# docs/EVIDENCE-multivendor.md.
+extend-exclude = ["demo/multivendor/fieldkit-run"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
