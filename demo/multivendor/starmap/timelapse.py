@@ -71,7 +71,25 @@ def commits(repo: Path) -> list[tuple[str, str, str, str]]:
     return out
 
 
-def render_frame(tree: Path, out_file: Path, caption: str) -> dict:
+def final_viewbox(tree: Path) -> str:
+    """The framing of the finished sky, reused for every earlier frame.
+
+    Without this the renderer would fit each frame to whatever existed at the time, so
+    the camera would zoom out on every new constellation and nothing would stay where
+    the eye left it. Pinning to the final state instead lets the sky fill a still frame.
+    """
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, str(RENDER_PY), "--root", str(tree), "--print-bounds"],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def render_frame(tree: Path, out_file: Path, caption: str, viewbox: str = "") -> dict:
     result = subprocess.run(  # noqa: S603
         [
             sys.executable,
@@ -82,6 +100,7 @@ def render_frame(tree: Path, out_file: Path, caption: str) -> dict:
             str(out_file),
             "--caption",
             caption,
+            *(["--viewbox", viewbox] if viewbox else []),
         ],
         check=False,
         capture_output=True,
@@ -122,14 +141,19 @@ def main(argv: list[str] | None = None) -> int:
         if not history:
             raise SystemExit("no commits, so no time-lapse")
 
+        # Measured at HEAD, before walking back, so every frame shares one camera.
+        viewbox = final_viewbox(clone)
+
         print(f"{len(history)} commit(s) -> {out_dir}")
+        if viewbox:
+            print(f"framing pinned to the final state: {viewbox}")
         frames: list[Frame] = []
 
         for index, (sha, stamp, author, subject) in enumerate(history, start=1):
             git(clone, "checkout", "--quiet", "--detach", sha)
             name = f"frame-{index:04d}.svg"
             caption = f"{index:02d}/{len(history)}  {stamp[11:19]}Z  {subject[:70]}"
-            info = render_frame(clone, out_dir / name, caption)
+            info = render_frame(clone, out_dir / name, caption, viewbox)
 
             frame = Frame(
                 index=index,

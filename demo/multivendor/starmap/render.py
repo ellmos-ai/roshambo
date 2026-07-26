@@ -286,13 +286,56 @@ def _f(value: float) -> str:
     return f"{value:.2f}"
 
 
+MARGIN = 70
+
+
+def bounds(points: list[tuple[float, float]]) -> tuple[float, float, float, float] | None:
+    if not points:
+        return None
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _fit_transform(points: list[tuple[float, float]], viewport=None):
+    """Scale and centre the projected drawing so it uses the canvas.
+
+    Framing is the renderer's job, not the projection's. The projection module decides
+    the *shape* -- which point goes where relative to the others -- and this preserves
+    that exactly: one uniform scale and one translation, no distortion, no reordering.
+    What it fixes is only how much of the canvas the result occupies, which is a
+    presentation concern and not something the agents' mathematics should have to solve.
+
+    `viewport` pins the framing to a fixed box instead of measuring the current points.
+    The time-lapse uses that so the camera holds still while the sky fills up, rather
+    than zooming out on every new constellation.
+    """
+    box = viewport or bounds(points)
+    if box is None:
+        return lambda point: point
+
+    min_x, min_y, max_x, max_y = box
+    span_x = max(max_x - min_x, 1e-9)
+    span_y = max(max_y - min_y, 1e-9)
+    scale = min((WIDTH - 2 * MARGIN) / span_x, (HEIGHT - 2 * MARGIN) / span_y)
+    offset_x = (WIDTH - span_x * scale) / 2 - min_x * scale
+    offset_y = (HEIGHT - span_y * scale) / 2 - min_y * scale
+
+    def transform(point: tuple[float, float]) -> tuple[float, float]:
+        return point[0] * scale + offset_x, point[1] * scale + offset_y
+
+    return transform
+
+
 def _escape(text: str) -> str:
     return (
         text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     )
 
 
-def render_svg(root: Path, caption: str = "") -> tuple[str, Report]:
+def render_svg(
+    root: Path, caption: str = "", viewport: tuple[float, float, float, float] | None = None
+) -> tuple[str, Report]:
     report = Report()
     constellations = load_constellations(root / "data" / "constellations", report)
     project = _load_projection(root, report)
@@ -306,11 +349,16 @@ def render_svg(root: Path, caption: str = "") -> tuple[str, Report]:
     )
     parts.append(f'<rect width="{WIDTH}" height="{HEIGHT}" fill="{background()}"/>')
 
-    for constellation in sorted(constellations, key=lambda c: c.slug):
+    ordered = sorted(constellations, key=lambda c: c.slug)
+    projected = [
+        (c, {star.id: project(star.ra, star.dec, WIDTH, HEIGHT) for star in c.stars})
+        for c in ordered
+    ]
+    fit = _fit_transform([p for _, points in projected for p in points.values()], viewport)
+
+    for constellation, raw_points in projected:
         report.constellations += 1
-        placed = {
-            star.id: project(star.ra, star.dec, WIDTH, HEIGHT) for star in constellation.stars
-        }
+        placed = {star_id: fit(point) for star_id, point in raw_points.items()}
 
         segments = []
         for start, end in constellation.lines:
@@ -370,11 +418,44 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", default=".", help="workspace holding data/ and starmap/")
     parser.add_argument("--out", default="starmap.svg")
     parser.add_argument("--caption", default="", help="drawn bottom-left, e.g. a commit subject")
+    parser.add_argument(
+        "--viewbox",
+        default="",
+        help=(
+            "pin the framing to 'min_x,min_y,max_x,max_y' in projected units instead of "
+            "measuring the current points. The time-lapse uses this so the camera holds "
+            "still while the sky fills up"
+        ),
+    )
+    parser.add_argument(
+        "--print-bounds",
+        action="store_true",
+        help="print the projected bounds of this state and exit; feeds --viewbox",
+    )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
-    svg, report = render_svg(root, args.caption)
+
+    if args.print_bounds:
+        report = Report()
+        found = load_constellations(root / "data" / "constellations", report)
+        project = _load_projection(root, report)
+        points = [project(star.ra, star.dec, WIDTH, HEIGHT) for c in found for star in c.stars]
+        box = bounds(points)
+        print("" if box is None else ",".join(f"{value:.6f}" for value in box))
+        return 0
+
+    viewport = None
+    if args.viewbox.strip():
+        try:
+            values = [float(part) for part in args.viewbox.split(",")]
+            if len(values) == 4:
+                viewport = (values[0], values[1], values[2], values[3])
+        except ValueError:
+            raise SystemExit(f"--viewbox must be four numbers, got {args.viewbox!r}") from None
+
+    svg, report = render_svg(root, args.caption, viewport)
     Path(args.out).write_text(svg, encoding="utf-8")
 
     if not args.quiet:
