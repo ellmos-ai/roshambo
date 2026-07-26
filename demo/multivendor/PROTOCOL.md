@@ -114,6 +114,23 @@ Definitions:
   the share of informative denials is reported. (Note: an agent *querying* `who-has` leaves
   no audit row — `who_has` is not audited — so only the denial path is provable here.)
 
+### Addendum, 2026-07-27 — one definition corrected, and why it is recorded here
+
+The "informative denial" rule above is defective as written, and the correction is
+disclosed rather than quietly applied, because a pre-registered protocol that gets edited
+without a note is worth nothing.
+
+As defined, an informative denial is a *genuine collision* whose reason names the holder
+— but a genuine collision already requires the named holder to match the live one. The
+count could therefore never differ from the collision count. It measured nothing.
+
+Corrected: the share is counted over **all denials**, not only those that became
+collisions. That is the property with actual meaning — how often a refused agent was told
+who was working, which is what lets it do something else instead of waiting.
+
+This affects only that one reported figure. No collision, contention-event or
+cross-vendor rule is touched, and the correction was made before the results were read.
+
 ## 6. What would make this run fail
 
 If the run produces **no genuine collision on a task resource**, then the claim is not
