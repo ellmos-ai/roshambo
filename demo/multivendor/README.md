@@ -8,10 +8,43 @@ nothing but Roshambo.
   counted. Read this first; it is what makes the numbers in
   `../../docs/EVIDENCE-multivendor.md` worth anything.
 - `rsb.py` — the front door the agents call.
-- `TASKS.md` — the shared, ordered task list.
-- `prompts/agent.md` — the protocol, given verbatim to all three vendors.
 - `run_field.py` — starts the agents.
 - `collect_evidence.py` — reads the result out of `audit_log`.
+
+Two joint projects have been run through it, selected with `--scenario`:
+
+| Scenario | What the agents build | Why it exists |
+|---|---|---|
+| `fieldkit` | twelve small text modules with tests (`TASKS.md`, `prompts/agent.md`) | the first collision measurement |
+| `starmap` | a night sky, rendered (`starmap/`, `prompts/starmap-agent.md`) | something that can be watched, and re-rendered at any commit |
+
+### The star map, and why it is data plus a renderer
+
+`starmap/render.py` is ours; the agents only add data files and three optional modules it
+picks up if they import. That split buys the property the whole thing rests on: **every
+past state can be rebuilt exactly.** `starmap/timelapse.py` walks the git history in a
+throwaway clone, re-renders each commit and writes numbered frames plus a manifest, so
+the sequence is evidence rather than an edit — each frame names the commit it came from,
+and the renderer is deterministic, so anyone can reproduce it.
+
+The renderer never fails. Truncated JSON, a line pointing at a star that was never
+defined, a module that imports and then throws: each is skipped, counted and written into
+the SVG itself. That is not defensive habit — a renderer that raised on a half-finished
+commit would put holes in the time-lapse exactly at the interesting moments.
+`tests/test_starmap_render.py` holds both properties in place.
+
+The sky is invented. Nothing in it claims to be astronomy, so no coordinate is asserted
+as a fact.
+
+Three of the twelve tasks are cut along capability lines rather than by vendor — the
+stereographic projection is mathematics, the palette and magnitude curve are graphic
+design, the title block and legend are structure and wording. They sit in the same
+ordered list as the nine constellation tasks, claimable by anyone, so who ends up doing
+which is earned rather than assigned.
+
+In this scenario the workspace is a git repository, and `starmap:repo` has to be claimed
+before committing — two agents writing the index at once corrupt it. An agent refused
+that claim is told to leave its files uncommitted and report, not to force it.
 
 ## Why a command and not MCP
 
@@ -70,6 +103,10 @@ Then set the environment and go:
 Then read the result out of the database, not out of the agents' logs:
 
     python collect_evidence.py --swarm <the same swarm id> --ttl 120
+
+And, for the star map, turn the run's own history into frames:
+
+    python starmap/timelapse.py --workspace <the same workspace> --out <frames dir>
 
 Use a **fresh swarm id** per run. `swarm_id` is the leading key column on every table,
 so a new id gives a clean slate without deleting anything.
