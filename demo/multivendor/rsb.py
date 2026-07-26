@@ -23,12 +23,31 @@ DSN would be a credential disclosure, so this wrapper reads the DSN itself, from
 a file whose *path* is handed in via ``ROSHAMBO_DSN_FILE``, and puts it in the
 environment of this process only. The agent sees the verbs and the exit codes.
 
-Exit codes are inherited from ``roshambo.cli`` and are the actual protocol:
-0 = did what you asked, 3 = refused (claim denied / unknown claim), 1 = error.
+What this adds, second thing
+----------------------------
+A status line on stdout. The exit code alone is not enough, and that is a
+measurement, not a preference: asked to run a script that exits 3 and report the
+code, the Antigravity agent reported 1. Each vendor drives a different shell
+(bash, pwsh, its own), and a command that is not found also exits non-zero, so
+"claim refused" and "your shell could not find the wrapper" are indistinguishable
+from the exit code alone.
+
+So every invocation prints, as its **first line**::
+
+    ROSHAMBO RESULT=GRANTED|DENIED|OK|NOOP|ERROR ...
+
+followed by the machine-readable payload. Exit codes are still set as
+``roshambo.cli`` sets them (0 ok, 3 refused, 1 error) and remain usable by any
+caller whose shell reports them faithfully -- they are simply no longer the only
+channel. A front door meant for agents that were never built for it has to state
+its answer in the one medium every one of them reads back reliably.
 """
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import os
 import sys
 from pathlib import Path
@@ -95,13 +114,67 @@ def resolve_dsn(env: dict[str, str]) -> str:
     )
 
 
+def _verb(args: list[str]) -> str:
+    """The subcommand, ignoring any leading global flags."""
+    return next((a for a in args if not a.startswith("-")), "")
+
+
+def status_line(verb: str, exit_code: int, payload: object) -> str:
+    """One unambiguous line an agent can match on without parsing anything else."""
+    if exit_code == 1:
+        return "ROSHAMBO RESULT=ERROR"
+
+    if verb == "claim" and isinstance(payload, dict):
+        if payload.get("granted"):
+            return (
+                f"ROSHAMBO RESULT=GRANTED resource={payload.get('resource')} "
+                f"claim_id={payload.get('claim_id')} expires_at={payload.get('expires_at')}"
+            )
+        return (
+            f"ROSHAMBO RESULT=DENIED resource={payload.get('resource')} "
+            f"held_by={payload.get('held_by')} expires_at={payload.get('expires_at')} "
+            f"intent={payload.get('intent')}"
+        )
+
+    if verb == "release" and isinstance(payload, dict):
+        return "ROSHAMBO RESULT=OK" if payload.get("released") else "ROSHAMBO RESULT=NOOP"
+
+    if verb == "who-has" and isinstance(payload, dict):
+        if not payload.get("held"):
+            return "ROSHAMBO RESULT=OK free=true"
+        return (
+            f"ROSHAMBO RESULT=OK free=false held_by={payload.get('agent_id')} "
+            f"expires_at={payload.get('expires_at')}"
+        )
+
+    return "ROSHAMBO RESULT=OK"
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = sys.argv[1:] if argv is None else argv
+    args = list(sys.argv[1:] if argv is None else argv)
     os.environ["ROSHAMBO_DSN"] = resolve_dsn(dict(os.environ))
 
     from roshambo.cli import main as cli_main
 
-    return cli_main(args)
+    # The payload is taken in machine-readable form so the status line can be built
+    # from the same values the caller sees, rather than by re-parsing prose.
+    if "--json" not in args:
+        args.insert(0, "--json")
+
+    captured = io.StringIO()
+    with contextlib.redirect_stdout(captured):
+        exit_code = cli_main(args)
+    raw = captured.getvalue()
+
+    try:
+        payload: object = json.loads(raw)
+    except json.JSONDecodeError:
+        payload = None
+
+    print(status_line(_verb(args), exit_code, payload))
+    if raw.strip():
+        print(raw, end="" if raw.endswith("\n") else "\n")
+    return exit_code
 
 
 if __name__ == "__main__":
