@@ -1,8 +1,7 @@
 # Multi-vendor field run
 
 Three coding agents from three different vendors, each in its own process and its own
-fresh session, building one small Python package together — coordinating through
-nothing but Roshambo.
+fresh session, building one thing together — coordinating through nothing but Roshambo.
 
 - `PROTOCOL.md` — what is being tested and, registered in advance, how collisions are
   counted. Read this first; it is what makes the numbers in
@@ -97,6 +96,7 @@ Then set the environment and go:
     python run_field.py \
         --workspace <somewhere outside this repo> \
         --swarm <a fresh swarm id> \
+        --scenario starmap \
         --rounds 2 --instances 3 --ttl 120 --timeout 900 \
         --interpreter <toolchain-dir>/venv/Scripts/python.exe
 
