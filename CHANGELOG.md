@@ -4,6 +4,34 @@ All notable changes to this project are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project has not yet cut a
 tagged release, so everything below is under `[Unreleased]`.
 
+## [0.1.2] - 2026-07-26
+
+### Added
+
+- `demo/run_story.py`: plays the four beats of the demo scenario against a live cluster,
+  one at a time (`--beat N`) or in one go (`--all`). `--measure --rounds N` repeats the
+  collision and judges each round against the phase-4 acceptance criterion — exactly one
+  winner, exactly two denials, every denial naming the actual winner and its intent.
+- `demo/serve.py`: one start command for the demo app with no hard-coded port or bind
+  address (`ROSHAMBO_DEMO_HOST` / `ROSHAMBO_DEMO_PORT` / `PORT` /
+  `ROSHAMBO_DEMO_ROOT_PATH`), so the eventual host does not force a code change.
+- "Turned Away" panel and `GET /api/denials`: the agents that lost a race, each with the
+  holder they were told about and that holder's intent. Read from the losers' own
+  `outcome='abandoned'` trails (`demo/queries.py:recent_denials`), so the record survives
+  the winner releasing its lease.
+- Deep-linkable recall search (`/?query=…&outcomes=…&limit=…`): fills the form in and runs
+  the search on load, so a result can be reproduced or recorded without typing.
+- `docs/EVIDENCE-demo.md` and `docs/screenshots/`: the measured acceptance run (10 of 10
+  rounds), the four beats as they actually ran, and four screenshots of the app live
+  against a CockroachDB Cloud cluster.
+
+### Fixed
+
+- `demo/static/index.html` loaded `style.css` and `app.js` from the document root while
+  both are served by the `/static` mount: the stylesheet and the entire frontend script
+  returned 404. All page URLs are now relative, which also makes the app work behind a
+  reverse proxy under a path prefix.
+
 ## [0.1.1] - 2026-07-26
 
 ### Added

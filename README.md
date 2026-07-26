@@ -259,6 +259,44 @@ claude mcp add --transport stdio roshambo \
 
 Then, inside Claude Code, run `/mcp` to confirm it connected and lists six tools.
 
+## See it running
+
+There is a small web app that shows a live swarm — who holds which lease, who was turned
+away and by whom, and a `recall()` search box — plus a script that plays the four-part
+demo scenario against a real cluster, one beat at a time:
+
+```bash
+pip install -r demo/requirements.txt
+export ROSHAMBO_EMBEDDING_PROVIDER="placeholder"   # see the note below
+python demo/serve.py --dev                          # http://127.0.0.1:8000/
+
+python demo/run_story.py --beat 1   # three agents collide; one lease, two informed refusals
+python demo/run_story.py --beat 2   # the winner hits a dead end and records it
+python demo/run_story.py --beat 3   # a new session finds that failure and picks another route
+python demo/run_story.py --beat 4   # a holder goes silent; the lease lapses and is taken over
+```
+
+Full walkthrough, including what to watch on screen during each beat:
+[`demo/README.md`](demo/README.md). Screenshots of it running against a CockroachDB Cloud
+cluster: [`docs/screenshots/`](docs/screenshots/).
+
+The acceptance number for the coordination claim is measured, not asserted:
+`python demo/run_story.py --measure --rounds 10` races three agents for one resource ten
+times over and checks each round for exactly one winner, exactly two denials, and every
+denial naming the actual winner. Ten of ten passed against the cloud cluster; three
+different runtimes won. Method, numbers and what did *not* work are in
+[`docs/EVIDENCE-demo.md`](docs/EVIDENCE-demo.md).
+
+Two things worth knowing before you record or judge anything:
+
+* The app **falls back to labelled mock data** whenever it cannot reach a cluster, rather
+  than crashing. Check `curl http://127.0.0.1:8000/api/health` for `"mode":"live"` first;
+  the page also shows a banner in mock mode.
+* `ROSHAMBO_EMBEDDING_PROVIDER=placeholder` selects the offline embedder that ranks by
+  **lexical overlap** (word tokens and character trigrams). It is the only offline
+  embedder with usable retrieval signal, but it is not a semantic model — see
+  [Known limitations](#known-limitations).
+
 ## Configuration
 
 Everything is read from the environment under the `ROSHAMBO_` prefix
@@ -271,7 +309,7 @@ Everything is read from the environment under the `ROSHAMBO_` prefix
 | `ROSHAMBO_SWARM_ID` | no | `default` | Tenant/prefix key; the leading column of every table's primary key and of the vector index |
 | `ROSHAMBO_EMBEDDING_DIM` | no | `1024` | Vector dimension (must match the schema's `VECTOR(n)` columns) |
 | `ROSHAMBO_LEASE_TTL_SECONDS` | no | `300` | Default claim lifetime |
-| `ROSHAMBO_EMBEDDING_PROVIDER` | no | `bedrock` | Which embedder `roshambo.embeddings.get_embedder` selects |
+| `ROSHAMBO_EMBEDDING_PROVIDER` | no | `bedrock` | Which embedder to use: `bedrock` (real) or `local` (offline hash, no retrieval signal). `Roshambo(cfg)` additionally accepts `placeholder` for the lexical offline embedder; `roshambo.embeddings.get_embedder` — and therefore the Lambda worker — does not |
 | `ROSHAMBO_AWS_REGION` | no | `us-east-1` | Region for Bedrock and S3 calls |
 | `ROSHAMBO_BEDROCK_MODEL_ID` | no | `amazon.titan-embed-text-v2:0` | Bedrock embedding model |
 | `ROSHAMBO_S3_BUCKET` | no | unset | Bucket for artifact storage; required only if you use `put_artifact` |

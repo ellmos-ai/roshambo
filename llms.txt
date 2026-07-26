@@ -38,4 +38,28 @@ pytest
 
 # Start MCP Server
 roshambo-mcp
+
+# Run the demo web app (no hard-coded port; ROSHAMBO_DEMO_PORT / PORT override)
+python demo/serve.py --dev
+
+# Play the four-beat demo scenario against a live cluster, one beat at a time
+python demo/run_story.py --beat 1
+
+# Measure the coordination claim: three concurrent workers, exactly one winner
+python demo/run_story.py --measure --rounds 10
 ```
+
+## Evidence
+
+Measured runs, not claims. Each file records what was executed and what was not:
+
+- `docs/EVIDENCE-cloud.md`: live suite against CockroachDB Cloud (45 passed, 1 skipped).
+- `docs/EVIDENCE-demo.md`: the demo scenario and the acceptance number — 10 of 10 rounds of
+  three concurrent workers produced exactly one winner and two correctly-attributed denials.
+  Also records what did not work: with the offline lexical embedder the reworded query finds
+  the prior failure at rank 3 unfiltered, rank 1 when filtered to failures.
+- `docs/EVIDENCE-core.md`, `docs/EVIDENCE-aws.md`, `docs/EVIDENCE-iface.md`: per-lane runs.
+- `docs/screenshots/`: screenshots of the demo app live against the cloud cluster.
+
+Not yet exercised: Amazon Bedrock embeddings, real AWS Lambda invocations, S3 artifacts.
+`recall()` is therefore not described as semantic anywhere in this repository.

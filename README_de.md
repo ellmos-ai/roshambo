@@ -270,6 +270,44 @@ claude mcp add --transport stdio roshambo \
 Danach in Claude Code `/mcp` ausführen, um zu bestätigen, dass die Verbindung steht und
 sechs Werkzeuge gelistet werden.
 
+## In Aktion sehen
+
+Es gibt eine kleine Web-Anwendung, die einen laufenden Schwarm zeigt — wer welchen Lease
+hält, wer abgewiesen wurde und von wem, dazu ein `recall()`-Suchfeld — und ein Skript, das
+das vierteilige Demo-Szenario gegen einen echten Cluster spielt, Schlag für Schlag:
+
+```bash
+pip install -r demo/requirements.txt
+export ROSHAMBO_EMBEDDING_PROVIDER="placeholder"   # siehe Hinweis unten
+python demo/serve.py --dev                          # http://127.0.0.1:8000/
+
+python demo/run_story.py --beat 1   # drei Agenten kollidieren; ein Lease, zwei begründete Absagen
+python demo/run_story.py --beat 2   # der Gewinner läuft in eine Sackgasse und hält das fest
+python demo/run_story.py --beat 3   # eine neue Sitzung findet diesen Fehlschlag und wählt einen anderen Weg
+python demo/run_story.py --beat 4   # ein Halter verstummt; der Lease läuft ab und wird übernommen
+```
+
+Vollständige Anleitung samt dem, was während jedes Schlags auf dem Bildschirm passiert:
+[`demo/README.md`](demo/README.md). Screenshots des Laufs gegen einen CockroachDB-Cloud-
+Cluster: [`docs/screenshots/`](docs/screenshots/).
+
+Die Abnahmezahl für die Koordinationsaussage ist gemessen, nicht behauptet:
+`python demo/run_story.py --measure --rounds 10` lässt drei Agenten zehnmal um dieselbe
+Ressource laufen und prüft je Runde auf genau einen Gewinner, genau zwei Absagen und darauf,
+dass jede Absage den tatsächlichen Gewinner nennt. Zehn von zehn Runden bestanden gegen den
+Cloud-Cluster; drei verschiedene Laufzeiten gewannen. Methode, Zahlen und das, was *nicht*
+aufging, stehen in [`docs/EVIDENCE-demo.md`](docs/EVIDENCE-demo.md).
+
+Zwei Dinge, die man vor einer Aufnahme oder Bewertung wissen sollte:
+
+* Die App **fällt auf gekennzeichnete Mock-Daten zurück**, sobald sie keinen Cluster
+  erreicht, statt abzustürzen. Vorher `curl http://127.0.0.1:8000/api/health` auf
+  `"mode":"live"` prüfen; die Seite zeigt im Mock-Modus außerdem ein Banner.
+* `ROSHAMBO_EMBEDDING_PROVIDER=placeholder` wählt den Offline-Embedder, der nach
+  **lexikalischer Überschneidung** rangiert (Worttoken und Zeichen-Trigramme). Er ist der
+  einzige Offline-Embedder mit brauchbarem Retrieval-Signal, aber kein semantisches Modell
+  — siehe [Bekannte Einschränkungen](#bekannte-einschränkungen).
+
 ## Konfiguration
 
 Alles wird aus der Umgebung unter dem Präfix `ROSHAMBO_` gelesen (`src/roshambo/config.py`),
@@ -282,7 +320,7 @@ funktioniert:
 | `ROSHAMBO_SWARM_ID` | nein | `default` | Mandanten-/Präfixschlüssel; führende Spalte jedes Tabellen-Primärschlüssels und des Vektorindex |
 | `ROSHAMBO_EMBEDDING_DIM` | nein | `1024` | Vektordimension (muss zu den `VECTOR(n)`-Spalten des Schemas passen) |
 | `ROSHAMBO_LEASE_TTL_SECONDS` | nein | `300` | Standard-Lebensdauer eines Claims |
-| `ROSHAMBO_EMBEDDING_PROVIDER` | nein | `bedrock` | Welchen Embedder `roshambo.embeddings.get_embedder` wählt |
+| `ROSHAMBO_EMBEDDING_PROVIDER` | nein | `bedrock` | Welcher Embedder genutzt wird: `bedrock` (echt) oder `local` (Offline-Hash, ohne Retrieval-Signal). `Roshambo(cfg)` akzeptiert zusätzlich `placeholder` für den lexikalischen Offline-Embedder; `roshambo.embeddings.get_embedder` — und damit der Lambda-Worker — nicht |
 | `ROSHAMBO_AWS_REGION` | nein | `us-east-1` | Region für Bedrock- und S3-Aufrufe |
 | `ROSHAMBO_BEDROCK_MODEL_ID` | nein | `amazon.titan-embed-text-v2:0` | Bedrock-Embedding-Modell |
 | `ROSHAMBO_S3_BUCKET` | nein | nicht gesetzt | Bucket für Artefaktspeicher; nur erforderlich bei Nutzung von `put_artifact` |
