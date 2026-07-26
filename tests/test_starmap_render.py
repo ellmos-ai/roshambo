@@ -131,7 +131,8 @@ def test_an_optional_module_returning_nonsense_falls_back(tmp_path: Path):
     _write_module(
         tmp_path,
         "style",
-        'def star_colour(s):\n    return "not a colour"\n\n\ndef star_radius(m):\n    return -999\n',
+        'def star_colour(s):\n    return "not a colour"\n\n\n'
+        "def star_radius(m):\n    return -999\n",
     )
 
     svg, _ = render.render_svg(tmp_path)
