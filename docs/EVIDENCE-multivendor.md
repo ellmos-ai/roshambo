@@ -177,6 +177,13 @@ The wider counts, for context rather than as the headline:
 Collisions and contention events are equal here because no agent retried a blocked
 resource — the protocol told them to move on instead, and they did.
 
+The five excluded denials are not noise dropped to tidy the figure; they are the pilot's
+failure mode reappearing at small scale. Each was a refusal whose named holder's lease had
+already lapsed by the time it was recorded — a real refusal, but not evidence that two
+agents wanted the same work at the same moment. Excluding them is the TTL window rule from
+`PROTOCOL.md` doing exactly the job it was written for, and 33 − 5 = 28 is checkable
+against `evidence.json`.
+
 Fifteen of the twenty-eight collisions were between two instances of the same vendor.
 Those prove concurrency, not heterogeneity, which is exactly why they are reported
 separately and why the cross-vendor number leads.

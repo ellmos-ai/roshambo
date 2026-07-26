@@ -64,7 +64,8 @@ those four refusals crossed a vendor boundary.
 - `evidence.json` — the full output of `../collect_evidence.py`, produced by applying
   the rules in `../PROTOCOL.md` to the `audit_log`.
 
-Three tasks (02, 03, 11) never reached `INDEX.md`. All three were OpenAI's, and the
-reason is in the run logs: those agents spent their remaining turn trying to run
-`pytest`, which their sandbox could not reach, and stopped before the registration step.
-The modules and their tests exist and pass; only the registry line is missing.
+`INDEX.md` holds ten lines covering nine distinct tasks, because task 10 is registered
+twice. Tasks **02, 03 and 11** were never registered at all — all three OpenAI's, and the
+reason is in the run logs: those agents spent their remaining turn trying to run `pytest`,
+which their sandbox could not reach, and stopped before the registration step. The modules
+and their tests exist and pass; only the registry line is missing.
