@@ -68,9 +68,7 @@ def read_dsn_from_file(path: Path) -> str:
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
-        raise SystemExit(
-            f"rsb: cannot read {DSN_FILE_ENV} at {path}: {exc.strerror}"
-        ) from None
+        raise SystemExit(f"rsb: cannot read {DSN_FILE_ENV} at {path}: {exc.strerror}") from None
 
     for raw in text.splitlines():
         line = raw.strip()
