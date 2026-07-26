@@ -5,11 +5,16 @@
 // State & Config
 // ============================================================================
 
+// Polling, not WebSockets. Plain GETs keep the app runnable on hosts that cannot
+// hold a socket open (an AWS Lambda Function URL, for one), and nothing here needs
+// sub-second latency: a lease lasts minutes. All URLs are relative so the app works
+// under a path prefix too -- see demo/serve.py.
 const CONFIG = {
   pollIntervals: {
-    health: 5000,    // Poll /api/health every 5s
-    status: 5000,    // Poll /api/status every 5s
-    claims: 3000,    // Poll /api/claims every 3s (most frequent)
+    health: 5000,    // Poll api/health every 5s
+    status: 5000,    // Poll api/status every 5s
+    claims: 3000,    // Poll api/claims every 3s (most frequent)
+    denials: 3000,   // Poll api/denials every 3s -- the other half of a collision
   },
 };
 
@@ -97,7 +102,7 @@ async function fetchJson(url) {
  * Shows banner if mode is 'mock', hides if 'live'.
  */
 async function pollHealth() {
-  const data = await fetchJson('/api/health');
+  const data = await fetchJson('api/health');
   if (!data) return;
 
   // Extract mode and detail
@@ -130,7 +135,7 @@ async function pollHealth() {
  * Poll /api/status and update stat tiles and swarm_id.
  */
 async function pollStatus() {
-  const data = await fetchJson('/api/status');
+  const data = await fetchJson('api/status');
   if (!data) return;
 
   // Update swarm_id label
@@ -166,8 +171,7 @@ function renderSystemCell(claim) {
     // guessed at.
     return '<span class="system-badge system-unknown">unknown origin</span>';
   }
-  const isAws = framework.toLowerCase().includes('aws') || framework.toLowerCase().includes('lambda');
-  const badgeClass = `system-badge ${isAws ? 'system-aws' : 'system-local'}`;
+  const badgeClass = `system-badge ${badgeClassFor(framework)}`;
   const host = claim.host ? `<div class="system-host">${escapeHtml(claim.host)}</div>` : '';
   return `<span class="${badgeClass}">${escapeHtml(framework)}</span>${host}`;
 }
@@ -176,7 +180,7 @@ function renderSystemCell(claim) {
  * Poll /api/claims and update the claims table.
  */
 async function pollClaims() {
-  const data = await fetchJson('/api/claims');
+  const data = await fetchJson('api/claims');
   if (!data) return;
 
   const tbody = document.getElementById('claims-tbody');
@@ -205,6 +209,79 @@ async function pollClaims() {
 }
 
 // ============================================================================
+// Denials Polling — Table
+// ============================================================================
+
+/**
+ * Poll /api/denials and update the "Turned Away" table.
+ *
+ * This is beat 1's second half. The winner of a race shows up in Active Claims;
+ * the agents that were turned away show up here, each with the holder it was told
+ * about. Rows outlive the winner's lease, because they are that agent's own
+ * abandoned trail rather than a live lock (see demo/queries.py:recent_denials).
+ */
+async function pollDenials() {
+  const data = await fetchJson('api/denials');
+  if (!data) return;
+
+  const tbody = document.getElementById('denials-tbody');
+  const denials = data.denials || [];
+
+  if (denials.length === 0) {
+    tbody.innerHTML = `
+      <tr class="empty-state">
+        <td colspan="5">No denied claims recorded yet.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = denials.map((denial) => {
+    // `resource`/`held_by`/`holder_intent` come from the trail's structured `detail`,
+    // which only demo/run_story.py's workers write. An older abandoned trail carries
+    // the same facts in prose only, so fall back to the evidence text instead of
+    // printing a row of dashes and pretending nothing was recorded.
+    const asked = renderSystemCell(denial);
+    const holderFramework = denial.holder_framework
+      ? `<span class="system-badge ${badgeClassFor(denial.holder_framework)}">${escapeHtml(denial.holder_framework)}</span>`
+      : '';
+    const holderIntent = denial.holder_intent
+      ? `<div class="denial-intent">${escapeHtml(denial.holder_intent)}</div>`
+      : `<div class="denial-intent denial-intent--prose">${escapeHtml(denial.evidence || '—')}</div>`;
+    return `
+      <tr>
+        <td>${escapeHtml(denial.resource || '—')}</td>
+        <td>${asked}</td>
+        <td class="denial-holder">${escapeHtml(shortId(denial.held_by))}</td>
+        <td>${holderFramework}${holderIntent}</td>
+        <td>${formatLocalTime(denial.created_at)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * Shorten a UUID for a table cell without losing its identity at a glance.
+ * @param {string|null} id
+ * @returns {string}
+ */
+function shortId(id) {
+  if (!id) return '—';
+  return id.length > 13 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id;
+}
+
+/**
+ * Which badge color a framework name gets. Shared by the claims and denials tables
+ * so the same runtime looks the same in both.
+ * @param {string} framework
+ * @returns {string}
+ */
+function badgeClassFor(framework) {
+  const name = framework.toLowerCase();
+  return name.includes('aws') || name.includes('lambda') ? 'system-aws' : 'system-local';
+}
+
+// ============================================================================
 // Recall Search — Form & Results
 // ============================================================================
 
@@ -221,7 +298,10 @@ function escapeHtml(text) {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
+  // Coerced, not assumed: several of these fields are nullable in the database
+  // (`trails.agent_id`, a trail's structured `detail` keys), and a table cell is not
+  // where a TypeError should surface.
+  return String(text ?? '').replace(/[&<>"']/g, (m) => map[m]);
 }
 
 /**
@@ -311,7 +391,7 @@ async function executeSearch() {
     .join(',');
 
   // Build URL
-  let url = `/api/recall?query=${encodeURIComponent(query)}&limit=${limit}`;
+  let url = `api/recall?query=${encodeURIComponent(query)}&limit=${limit}`;
   if (outcomes) {
     url += `&outcomes=${outcomes}`;
   }
@@ -384,15 +464,18 @@ function attachSearchListeners() {
  * Start all polling intervals.
  */
 function startPolling() {
-  // Initial immediate poll
+  // Initial immediate poll -- without this the first screenful is empty for a full
+  // interval, which matters when someone is screenshotting or recording the page.
   pollHealth();
   pollStatus();
   pollClaims();
+  pollDenials();
 
   // Set up intervals
   setInterval(pollHealth, CONFIG.pollIntervals.health);
   setInterval(pollStatus, CONFIG.pollIntervals.status);
   setInterval(pollClaims, CONFIG.pollIntervals.claims);
+  setInterval(pollDenials, CONFIG.pollIntervals.denials);
 }
 
 // ============================================================================

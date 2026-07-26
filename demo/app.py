@@ -32,6 +32,7 @@ Run: ``uvicorn demo.app:app --reload`` from the repo root (with ``src/`` on
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -50,7 +51,13 @@ STATIC_DIR = Path(__file__).parent / "static"
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 VALID_OUTCOMES = {"success", "failure", "abandoned", "inconclusive"}
 
-app = FastAPI(title="Roshambo demo")
+# Nothing here decides *where* this app is served. Port and bind address are the
+# caller's business (see `demo/serve.py`), and `ROSHAMBO_DEMO_ROOT_PATH` lets it sit
+# behind a reverse proxy under a path prefix -- every URL the frontend builds is
+# relative, so mounting at "/" or at "/roshambo/" both work without an edit. The
+# host has not been chosen yet (see MANIFEST.md), and this file is not the place
+# where that choice should have to be made.
+app = FastAPI(title="Roshambo demo", root_path=os.environ.get("ROSHAMBO_DEMO_ROOT_PATH", ""))
 
 
 # --------------------------------------------------------------------- state
@@ -160,6 +167,23 @@ _MOCK_TRAILS = [
 ]
 
 
+_MOCK_DENIALS = [
+    {
+        "trail_id": "mock-trail-3",
+        "agent_id": "c4e2d3c1-3333-4b22-8b3c-000000000003",
+        "topic": "migrate billing schema",
+        "evidence": _MOCK_TRAILS[2]["evidence"],
+        "created_at": _MOCK_TRAILS[2]["created_at"],
+        "framework": "local-cli-agent",
+        "host": "local-workstation-mock01",
+        "resource": _MOCK_CLAIMS[0]["resource"],
+        "held_by": _MOCK_CLAIMS[0]["agent_id"],
+        "holder_framework": _MOCK_CLAIMS[0]["framework"],
+        "holder_intent": _MOCK_CLAIMS[0]["intent"],
+    }
+]
+
+
 def _mock_status() -> dict:
     return {"agents": 3, "active_claims": 1, "trails": 3, "failures": 1, "facts": 0}
 
@@ -198,6 +222,28 @@ def api_claims() -> dict[str, Any]:
     else:
         claims = _MOCK_CLAIMS
     return {"mode": backend.mode, "claims": claims}
+
+
+@app.get("/api/denials")
+def api_denials(limit: int = Query(10, ge=1, le=50)) -> dict[str, Any]:
+    """Recently lost races -- beat 1's "Absage mit Angabe, wer arbeitet".
+
+    A denial is only ever a return value, never a row of its own, so what is listed
+    here are the ``outcome="abandoned"`` trails the losing workers wrote about
+    themselves. See ``demo/queries.py:recent_denials`` for why that source beats
+    ``audit_log``.
+    """
+    if backend.mode == "live":
+        from demo.queries import recent_denials
+
+        try:
+            denials = recent_denials(backend.cfg, limit=limit)
+        except Exception as exc:
+            backend.refresh()
+            raise HTTPException(status_code=503, detail=f"denials query failed: {exc}") from exc
+    else:
+        denials = _MOCK_DENIALS[:limit]
+    return {"mode": backend.mode, "denials": denials}
 
 
 @app.get("/api/recall")

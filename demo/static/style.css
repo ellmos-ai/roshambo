@@ -290,6 +290,29 @@ a:hover {
   color: var(--text-secondary);
 }
 
+/* Denials panel ("Turned Away") */
+.panel-hint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.denial-holder {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.denial-intent {
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+/* An older trail that only recorded the denial in prose, with no structured detail --
+   shown as-is rather than dropped, but visibly not the same kind of value. */
+.denial-intent--prose {
+  font-style: italic;
+}
+
 /* Search Controls */
 .search-controls {
   margin-bottom: 20px;

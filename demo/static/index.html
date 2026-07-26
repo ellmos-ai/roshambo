@@ -4,15 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Roshambo — the multi-agent coordinator</title>
-  <link rel="icon" type="image/png" href="/assets/roshambo-favicon.png">
-  <link rel="stylesheet" href="style.css">
+  <!-- Every URL on this page is relative on purpose: served at "/" they resolve to
+       /static/... and /assets/..., and behind a reverse proxy under a path prefix
+       (ROSHAMBO_DEMO_ROOT_PATH) they resolve under that prefix instead. A leading
+       slash would hard-code "this app owns the domain root", which the not-yet-chosen
+       host may well not grant. `style.css` without the `static/` segment was also
+       simply a 404: the stylesheet is served by the /static mount, not from "/". -->
+  <link rel="icon" type="image/png" href="assets/roshambo-favicon.png">
+  <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
   <div class="container">
     <!-- Header -->
     <header class="header">
       <div class="header-content">
-        <img src="/assets/roshambo-mark-dark.png" alt="" class="logo-mark">
+        <img src="assets/roshambo-mark-dark.png" alt="" class="logo-mark">
         <div>
           <h1>Roshambo</h1>
           <p class="tagline">The multi-agent coordinator</p>
@@ -77,6 +83,33 @@
       </div>
     </section>
 
+    <!-- Denied Claims Panel -->
+    <!-- Beat 1's other half: the losers of a race. A denial is a return value, not a
+         row, so what is listed here are the abandoned trails the losing workers wrote
+         about themselves -- which is also why they survive the winner releasing its
+         lease. Each line names who was working and what they were doing. -->
+    <section class="panel">
+      <h2>Turned Away <span class="panel-hint">— lost races, newest first</span></h2>
+      <div id="denials-container">
+        <table class="claims-table">
+          <thead>
+            <tr>
+              <th>Resource</th>
+              <th>Asked</th>
+              <th>Was told: held by</th>
+              <th>Who is working, and on what</th>
+              <th>When</th>
+            </tr>
+          </thead>
+          <tbody id="denials-tbody">
+            <tr class="empty-state">
+              <td colspan="5">No denied claims recorded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- Recall Search Panel -->
     <section class="panel">
       <h2>Recall Search</h2>
@@ -122,6 +155,6 @@
     </section>
   </div>
 
-  <script src="app.js"></script>
+  <script src="static/app.js"></script>
 </body>
 </html>
