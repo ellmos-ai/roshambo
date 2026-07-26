@@ -3,7 +3,7 @@
 > Roshambo is a multi-agent coordinator built on CockroachDB and AWS Bedrock: serializable leases so two agents never claim the same work, and a distributed vector index so an agent can recall earlier attempts and outcomes before starting.
 
 Last-checked: 2026-07-26
-Verification: 73 passed, 45 skipped (118 total pytest tests verified)
+Verification: 79 passed, 45 skipped (124 total pytest tests verified)
 
 ## Overview
 
@@ -41,6 +41,9 @@ roshambo-mcp
 
 # Run the demo web app (no hard-coded port; ROSHAMBO_DEMO_PORT / PORT override)
 python demo/serve.py --dev
+
+# Same app as an AWS Lambda Function URL handler (adapter only, not deployed)
+#   handler = demo.lambda_entry.handler
 
 # Play the four-beat demo scenario against a live cluster, one beat at a time
 python demo/run_story.py --beat 1

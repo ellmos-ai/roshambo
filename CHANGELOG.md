@@ -8,6 +8,12 @@ tagged release, so everything below is under `[Unreleased]`.
 
 ### Added
 
+- `demo/lambda_entry.py`: the demo web app as an AWS Lambda Function URL handler, via one
+  Mangum adapter over the same `demo.app:app` that runs locally — no second code path.
+  Not deployed (no AWS account attached yet); `tests/test_demo_lambda_entry.py` drives the
+  handler with payload-format-2.0 events and checks binary assets, query strings, the
+  `FileResponse` index route and error status codes.
+
 - `demo/run_story.py`: plays the four beats of the demo scenario against a live cluster,
   one at a time (`--beat N`) or in one go (`--all`). `--measure --rounds N` repeats the
   collision and judges each round against the phase-4 acceptance criterion — exactly one

@@ -297,6 +297,13 @@ Two things worth knowing before you record or judge anything:
   embedder with usable retrieval signal, but it is not a semantic model — see
   [Known limitations](#known-limitations).
 
+The same app also runs as an AWS Lambda function behind a Function URL — its intended
+host — through one adapter, `demo.lambda_entry.handler`, with no second code path. That
+is why the frontend polls rather than opening a WebSocket, which a Function URL cannot
+do. It has not been deployed (no AWS account is attached yet); what is verified is that
+the handler answers Function-URL-shaped events, binary assets and query strings included
+(`tests/test_demo_lambda_entry.py`).
+
 ## Configuration
 
 Everything is read from the environment under the `ROSHAMBO_` prefix

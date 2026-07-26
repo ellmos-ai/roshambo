@@ -308,6 +308,13 @@ Zwei Dinge, die man vor einer Aufnahme oder Bewertung wissen sollte:
   einzige Offline-Embedder mit brauchbarem Retrieval-Signal, aber kein semantisches Modell
   — siehe [Bekannte Einschränkungen](#bekannte-einschränkungen).
 
+Dieselbe Anwendung läuft auch als AWS-Lambda-Funktion hinter einer Function URL — ihrem
+vorgesehenen Host — über einen einzigen Adapter, `demo.lambda_entry.handler`, ohne zweiten
+Codepfad. Genau deshalb pollt das Frontend, statt einen WebSocket zu öffnen: eine Function
+URL kann das nicht. Deployt wurde sie nicht (es ist noch kein AWS-Konto angebunden);
+verifiziert ist, dass der Handler Function-URL-förmige Events beantwortet, samt
+Binärdateien und Query-Strings (`tests/test_demo_lambda_entry.py`).
+
 ## Konfiguration
 
 Alles wird aus der Umgebung unter dem Präfix `ROSHAMBO_` gelesen (`src/roshambo/config.py`),

@@ -149,6 +149,51 @@ One consequence to know about: `roshambo.embeddings.get_embedder()` accepts only
 with it `run_collision_demo.py --lambda-mode local-simulate` — cannot run in the same
 environment. Run that demo with `ROSHAMBO_EMBEDDING_PROVIDER=local` in a separate shell.
 
+## Run it as a Lambda (the intended host)
+
+The demo is meant to end up behind an **AWS Lambda Function URL** (decided 2026-07-26).
+`demo/lambda_entry.py` is the entire adapter for that — one `Mangum(app, lifespan="off")`
+over the same `demo.app:app` that runs locally:
+
+```
+Lambda handler:  demo.lambda_entry.handler
+Local:           python demo/serve.py --dev
+```
+
+There is no second code path on purpose. Two properties of the app make that possible and
+need to stay true:
+
+* **It polls, it never holds a socket open.** Function URLs cannot do WebSockets. If a
+  future change wants live updates, it has to stay on `GET` polling or the host choice
+  breaks. Nothing in the current scenario needs sub-second latency — a lease lasts minutes.
+* **Every URL the page builds is relative.** A Function URL serves at the domain root so
+  the question does not arise there, but this is also what makes the reverse-proxy
+  fallback host work.
+
+### Not verified, and what it would take
+
+Nothing has run in AWS: no account is attached to this project yet. What *is* verified is
+that the handler answers Function-URL-shaped events correctly — including a base64 binary
+asset and a query string, the two things adapters silently get wrong — in
+`tests/test_demo_lambda_entry.py`. Open, in rough order of how likely each is to bite:
+
+* **The deployment package.** It needs `mangum`, `fastapi`/`starlette`, `psycopg[binary]`
+  and `src/roshambo`; it does **not** need `uvicorn`. `infra/deploy_lambda.py` packages
+  the *worker* function and explains the manylinux-wheel convention that a demo package
+  would follow — no such package is built here, because a zip that cannot be invoked
+  proves nothing about whether the app runs in Lambda.
+* **The database connection from Lambda.** TLS to the cluster over a Lambda ENI, and the
+  psycopg wheel against the actual runtime, are only settled by a real invocation.
+* **Cold start into mock mode.** `demo/app.py` connects once at import (so a warm
+  container reuses the connection). If that first attempt fails, the container serves
+  labelled mock data until a query errors and triggers a refresh. On a host with many
+  short-lived containers that is worth an edge health check rather than in-process retry
+  logic — the mock banner makes it visible either way, but the health endpoint is the
+  thing to alarm on.
+* **A deprecation in mangum itself.** mangum 0.21.0 calls `asyncio.get_event_loop()`,
+  which warns on Python 3.12 (visible in the test run). Not our code, but it is the kind
+  of thing that turns into an error on a future runtime.
+
 ## Play the demo script
 
 `demo/run_story.py` plays the four beats of MANIFEST.md section 7 against the live cluster.
