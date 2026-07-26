@@ -25,8 +25,19 @@ build step, no framework). Shows:
    race -- before repeating it. A denied claim writes an `outcome="abandoned"`
    trail (see below), so a lost collision is itself something `recall()` can
    surface later, not just a line printed to a terminal.
-3. **Status strip** -- `Roshambo.status()` counters (agents, active claims,
+3. **Turned Away** -- the agents that lost a race, each with the holder they were
+   told about and what that holder is doing. This is beat 1's other half: a
+   `ClaimDenied` is a return value, never a row, so what is listed are the
+   `outcome="abandoned"` trails the losing workers wrote about themselves. They
+   therefore outlive the winner releasing its lease, and they are readable no
+   matter which embedder wrote them (no vector is involved). Fed by
+   `/api/denials` → `demo/queries.py:recent_denials`.
+4. **Status strip** -- `Roshambo.status()` counters (agents, active claims,
    trails, failures, facts).
+
+The recall search is deep-linkable: `/?query=…&outcomes=failure&limit=5` fills the
+form in and runs the search on load, which is how the screenshots in
+`docs/screenshots/` were taken and how a beat can be replayed for a recording.
 
 ## The collision demo
 
@@ -83,26 +94,108 @@ Every API response carries a `"mode"` field:
 pip install -r demo/requirements.txt
 pip install -e ".[aws]"        # or: PYTHONPATH=src
 
-# to run against a real cluster:
-export ROSHAMBO_DSN="postgresql://root@<cluster-host>:26257/roshambo?sslmode=verify-full"
+export ROSHAMBO_DSN="postgresql://<user>@<cluster-host>:26257/roshambo?sslmode=verify-full"
 export ROSHAMBO_SWARM_ID="demo"
+export ROSHAMBO_EMBEDDING_PROVIDER="placeholder"   # see "Which embedder" below
 
-python -m uvicorn demo.app:app --reload --port 8000
+python demo/serve.py --dev
 ```
 
-Then open `http://localhost:8000/`.
+Then open `http://127.0.0.1:8000/`.
 
-`python -m uvicorn` (not the bare `uvicorn` command) is deliberate: `-m`
-adds the current directory to `sys.path`, which is what makes `demo` (a
-plain directory, not installed as a package) importable as
-`demo.app:app` / `from demo.queries import ...`.
+**Check the mode before you record anything.** The app falls back to mock data on any
+connection failure rather than crashing, and a mock-mode recording is worthless:
+
+```bash
+curl http://127.0.0.1:8000/api/health     # expect {"mode":"live","detail":"connected"}
+```
+
+`demo/serve.py` hard-codes no port and no bind address, so the eventual host does not
+force a code change:
+
+| variable | meaning | default |
+|---|---|---|
+| `ROSHAMBO_DEMO_HOST` | bind address | `127.0.0.1` |
+| `ROSHAMBO_DEMO_PORT` | port | `8000` |
+| `PORT` | port, used if the above is unset (what managed hosts set) | — |
+| `ROSHAMBO_DEMO_ROOT_PATH` | path prefix when behind a reverse proxy | `""` |
+
+`--dev` adds auto-reload. The default bind is loopback with or without it: this endpoint
+has no authentication (see "Not built here"), so it does not start listening on every
+interface by accident. Everything the page fetches is a relative URL and a plain polled
+`GET` — no WebSockets — so it also runs on a host that cannot hold a socket open, and under
+a path prefix.
+
+### If the connection fails with a certificate error
+
+`sslmode=verify-full` makes libpq verify the cluster's certificate, and on a fresh machine
+there may be no root certificate where it looks (`%APPDATA%\postgresql\root.crt` on
+Windows, `~/.postgresql/root.crt` elsewhere). Download the CA chain from the cluster
+console and point the DSN at it with `&sslrootcert=/path/to/root.crt` rather than
+installing it host-wide — and do **not** work around it with `sslmode=require`, which
+simply switches the check off. Recorded in `docs/EVIDENCE-cloud.md` (2026-07-26).
+
+### Which embedder
+
+`ROSHAMBO_EMBEDDING_PROVIDER=placeholder` selects `roshambo.memory.PlaceholderEmbedder`,
+which hashes word tokens and character trigrams — the only offline embedder with any
+retrieval signal, and the one the test suite uses. Its ranking is **lexical overlap, not
+semantic similarity**. The `local` provider (`DeterministicEmbedder`) hashes the whole text
+into uncorrelated vectors and makes `recall()` rank arbitrarily; `bedrock` is the real
+semantic path and needs AWS credentials.
+
+One consequence to know about: `roshambo.embeddings.get_embedder()` accepts only
+`bedrock`/`local` (CONTRACT.md) and raises on `placeholder`, so `roshambo.aws.worker` — and
+with it `run_collision_demo.py --lambda-mode local-simulate` — cannot run in the same
+environment. Run that demo with `ROSHAMBO_EMBEDDING_PROVIDER=local` in a separate shell.
+
+## Play the demo script
+
+`demo/run_story.py` plays the four beats of MANIFEST.md section 7 against the live cluster.
+Run them one at a time with the browser open next to the terminal — the UI polls, so each
+beat visibly changes it:
+
+```bash
+python demo/run_story.py --beat 1   # three agents collide; one lease, two informed refusals
+python demo/run_story.py --beat 2   # the winner hits a dead end and records it
+python demo/run_story.py --beat 3   # a new session finds that failure and picks another route
+python demo/run_story.py --beat 4   # a holder goes silent; the lease lapses and is taken over
+```
+
+What to watch, beat by beat:
+
+1. **Active Claims** gains one row, **Turned Away** gains two — same resource, both naming
+   the winner and its intent. The winner keeps its lease on purpose so this state is
+   photographable.
+2. **Failures** goes to 1 and the claim disappears: the agent failed and handed the lease
+   back rather than sitting on it.
+3. Open the URL the script prints in its `reworded_query` field as a search, e.g.
+   `/?query=roll+out+the+pending+schema+change+for+billing+on+the+live+database&outcomes=failure`.
+   The script also prints the full ranked hit list, unfiltered and filtered.
+4. **Active Claims** shows a *different* runtime holding the failover resource. The
+   taking-over agent keeps its lease, so the app is left with something live on screen.
+
+`--beat N` carries the winner, its lease and the failure trail between runs in
+`demo/.story-state.json` (gitignored). `--all` runs all four in memory and writes nothing.
+
+```bash
+python demo/run_story.py --measure --rounds 10
+```
+
+repeats beat 1 and judges each round against the phase-4 acceptance criterion — exactly one
+winner, exactly two denials, every denial naming the actual winner. It runs in its own
+swarm (`<swarm_id>-measure`) so it does not disturb the counters the UI is showing.
+Measured results: `docs/EVIDENCE-demo.md`.
 
 ## Known gap (see docs/HANDOFF.md, 2026-07-25)
 
 `demo/queries.py` reads the `claims` table directly via `roshambo.db`'s
 generic SQL helpers, because `roshambo.memory.Roshambo` has no bulk
 "list active claims" method (only `who_has(resource)` for one resource at a
-time, and `status()` for a count). This is a read-only, demo-only
+time, and `status()` for a count). Its second function, `recent_denials`,
+reads `trails` directly for the same reason: `recall()` searches by vector,
+and "the last n abandoned trails, newest first" is an ordinary query, not a
+similarity question. This is a read-only, demo-only
 workaround -- a `Roshambo.list_active_claims()` convenience method would let
 this file go away. It now also `LEFT JOIN`s the `agents` table to resolve
 each claim's `framework`/`host` (see `run_local_worker`'s and
