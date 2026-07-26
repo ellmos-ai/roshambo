@@ -38,8 +38,15 @@ def vendor_of(agent_id: str) -> str | None:
     return VENDOR_OF.get(re.sub(r"-\d+$", "", agent_id or ""))
 
 
-TASK_PREFIX = "fieldkit:task:"
-INDEX_RESOURCE = "fieldkit:index"
+# Which resource names belong to which class, per joint project. This is naming, not
+# counting: the rules in PROTOCOL.md section 5 are the same for every scenario, and
+# adding a scenario here cannot change what a collision is. It only decides which of
+# the two separately-reported buckets a resource falls into -- the work itself, or the
+# serialization point we created on purpose and never sum in.
+SCENARIOS = {
+    "fieldkit": {"task_prefix": "fieldkit:task:", "serialization": "fieldkit:index"},
+    "starmap": {"task_prefix": "starmap:task:", "serialization": "starmap:repo"},
+}
 
 HELD_BY = "held by "
 
@@ -146,18 +153,21 @@ def fetch_counts(dsn: str, swarm_id: str) -> dict[str, int]:
     return counts
 
 
-def classify(resource: str | None) -> str:
+def classify(resource: str | None, names: dict[str, str]) -> str:
     if resource is None:
         return "other"
-    if resource.startswith(TASK_PREFIX):
+    if resource.startswith(names["task_prefix"]):
         return "task"
-    if resource == INDEX_RESOURCE:
+    if resource == names["serialization"]:
         return "index"
     return "other"
 
 
-def analyse(events: list[Event], ttl_seconds: int) -> dict[str, Analysis]:
+def analyse(
+    events: list[Event], ttl_seconds: int, names: dict[str, str] | None = None
+) -> dict[str, Analysis]:
     """Apply the rules from PROTOCOL.md section 5, verbatim."""
+    names = names or SCENARIOS["fieldkit"]
     window = timedelta(seconds=ttl_seconds)
     analyses = {name: Analysis(name) for name in ("task", "index", "other")}
     # Most recent grant seen per resource, walking forward in time.
@@ -165,7 +175,7 @@ def analyse(events: list[Event], ttl_seconds: int) -> dict[str, Analysis]:
 
     for event in events:
         resource = event.resource or ""
-        bucket = analyses[classify(event.resource)]
+        bucket = analyses[classify(event.resource, names)]
 
         if event.allowed:
             last_grant[resource] = (event.agent_id or "?", event.created_at)
@@ -256,7 +266,7 @@ def render(summary: dict) -> str:
 
     for key, title in (
         ("task_resources", "TASK RESOURCES (the number that matters)"),
-        ("index_resource", "INDEX RESOURCE (deliberate serialization point)"),
+        ("index_resource", "SERIALIZATION POINT (created on purpose, never summed in)"),
         ("other_resources", "OTHER RESOURCES"),
     ):
         block = summary[key]
@@ -288,13 +298,25 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--swarm", required=True)
     parser.add_argument("--ttl", type=int, default=120)
+    parser.add_argument(
+        "--scenario",
+        default="fieldkit",
+        choices=sorted(SCENARIOS),
+        help=(
+            "which joint project this swarm ran. Selects resource NAMES only -- the "
+            "counting rules in PROTOCOL.md are identical for every scenario"
+        ),
+    )
     parser.add_argument("--json-out", help="write the full summary here")
     args = parser.parse_args(argv)
 
     dsn = resolve_dsn(dict(os.environ))
     events = fetch_events(dsn, args.swarm)
     counts = fetch_counts(dsn, args.swarm)
-    summary = summarise(analyse(events, args.ttl), counts, args.ttl)
+    names = SCENARIOS[args.scenario]
+    summary = summarise(analyse(events, args.ttl, names), counts, args.ttl)
+    summary["scenario"] = args.scenario
+    summary["resource_names"] = names
 
     print(render(summary))
 
