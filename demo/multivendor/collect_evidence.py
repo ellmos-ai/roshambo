@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
@@ -30,6 +31,12 @@ VENDOR_OF = {
     "codex": "openai",
     "agy": "google",
 }
+
+
+def vendor_of(agent_id: str) -> str | None:
+    """Vendor behind an agent id, ignoring the `-N` concurrent-instance suffix."""
+    return VENDOR_OF.get(re.sub(r"-\d+$", "", agent_id or ""))
+
 
 TASK_PREFIX = "fieldkit:task:"
 INDEX_RESOURCE = "fieldkit:index"
@@ -66,8 +73,8 @@ class Collision:
         as "different" would let a stray manual claim inflate the one figure the
         whole claim rests on.
         """
-        denied = VENDOR_OF.get(self.denied_agent)
-        holder = VENDOR_OF.get(self.holder)
+        denied = vendor_of(self.denied_agent)
+        holder = vendor_of(self.holder)
         return bool(denied and holder and denied != holder)
 
 

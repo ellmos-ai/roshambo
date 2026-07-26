@@ -31,12 +31,15 @@ import os
 import shutil
 import subprocess
 import sys
+import sysconfig
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parent.parent
+SRC_DIR = REPO_ROOT / "src"
 RSB_PY = HERE / "rsb.py"
 TASKS_MD = HERE / "TASKS.md"
 PROMPT_MD = HERE / "prompts" / "agent.md"
@@ -164,6 +167,14 @@ def write_launcher(workspace: Path, env: dict[str, str], swarm_id: str) -> Path:
     cert = env.get("ROSHAMBO_SSLROOTCERT_FILE", "").strip()
     cert_line = f'set "ROSHAMBO_SSLROOTCERT_FILE={cert}"\r\n' if cert else ""
 
+    # The base interpreter, not the virtualenv's python.exe. That file is a shim that
+    # re-reads pyvenv.cfg and hands off to the base interpreter, and inside Codex's
+    # sandbox the hand-off fails outright ("No Python at '...'"), which cost the pilot
+    # run its third vendor. Naming the real interpreter and supplying the search path
+    # ourselves removes the indirection that broke.
+    interpreter = getattr(sys, "_base_executable", None) or sys.executable
+    search_path = os.pathsep.join([sysconfig.get_paths()["purelib"], str(SRC_DIR)])
+
     launcher = workspace / "rsb.cmd"
     launcher.write_text(
         "@echo off\r\n"
@@ -172,7 +183,8 @@ def write_launcher(workspace: Path, env: dict[str, str], swarm_id: str) -> Path:
         f"{cert_line}"
         f'set "ROSHAMBO_SWARM_ID={swarm_id}"\r\n'
         'set "ROSHAMBO_EMBEDDING_PROVIDER=placeholder"\r\n'
-        f'"{sys.executable}" "{RSB_PY}" %*\r\n',
+        f'set "PYTHONPATH={search_path}"\r\n'
+        f'"{interpreter}" "{RSB_PY}" %*\r\n',
         encoding="ascii",
     )
     return launcher
@@ -199,10 +211,10 @@ def prepare_workspace(workspace: Path, env: dict[str, str], swarm_id: str) -> Pa
     return write_launcher(workspace, env, swarm_id)
 
 
-def render_prompt(vendor: Vendor, workspace: Path, launcher: Path, ttl: int) -> str:
+def render_prompt(agent_id: str, workspace: Path, launcher: Path, ttl: int) -> str:
     template = PROMPT_MD.read_text(encoding="utf-8")
     return (
-        template.replace("{AGENT_ID}", vendor.agent_id)
+        template.replace("{AGENT_ID}", agent_id)
         .replace("{WORKDIR}", str(workspace))
         .replace("{RSB}", str(launcher))
         .replace("{TTL}", str(ttl))
@@ -221,6 +233,7 @@ def agent_env(env: dict[str, str]) -> dict[str, str]:
 def run_round(
     round_index: int,
     keys: list[str],
+    instances: int,
     workspace: Path,
     launcher: Path,
     ttl: int,
@@ -228,19 +241,26 @@ def run_round(
     env: dict[str, str],
 ) -> list[Invocation]:
     child_env = agent_env(env)
-    started: list[tuple[str, subprocess.Popen, Invocation, Path]] = []
+    started: list[tuple[subprocess.Popen, Invocation]] = []
 
-    for key in keys:
+    # Interleaved rather than grouped by vendor, so no vendor systematically gets a
+    # head start on every round.
+    plan = [(key, instance) for instance in range(1, instances + 1) for key in keys]
+
+    for key, instance in plan:
         vendor = VENDORS[key]
-        prompt = render_prompt(vendor, workspace, launcher, ttl)
-        log_path = workspace / "_logs" / f"round{round_index:02d}-{key}.log"
+        agent_id = vendor.agent_id if instances == 1 else f"{vendor.agent_id}-{instance}"
+        label = key if instances == 1 else f"{key}-{instance}"
+        prompt = render_prompt(agent_id, workspace, launcher, ttl)
+        log_path = workspace / "_logs" / f"round{round_index:02d}-{label}.log"
         handle = log_path.open("w", encoding="utf-8", errors="replace")
         record = Invocation(
             round_index=round_index,
-            key=key,
-            agent_id=vendor.agent_id,
+            key=label,
+            agent_id=agent_id,
             vendor=vendor.vendor,
             started_at=datetime.now(timezone.utc).isoformat(),
+            log=log_path.name,
         )
         process = subprocess.Popen(  # noqa: S603
             vendor.command(prompt, workspace, env),
@@ -250,28 +270,37 @@ def run_round(
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
         )
-        started.append((key, process, record, log_path))
-        print(f"  round {round_index}: started {key} (pid {process.pid})", flush=True)
+        started.append((process, record))
+        print(f"  round {round_index}: started {label} (pid {process.pid})", flush=True)
 
-    results = []
-    for key, process, record, log_path in started:
-        try:
-            record.exit_code = process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-            record.timed_out = True
-            record.exit_code = None
-            print(f"  round {round_index}: {key} timed out, killed", flush=True)
-        record.ended_at = datetime.now(timezone.utc).isoformat()
-        record.log = str(log_path.name)
-        results.append(record)
-        print(
-            f"  round {round_index}: {key} finished (exit {record.exit_code})",
-            flush=True,
-        )
+    # Polled rather than waited on in order. Waiting on each process in turn records
+    # the moment it was *reaped*, not the moment it exited, which in the pilot made
+    # three processes look as if they had all finished in the same millisecond.
+    deadline = time.monotonic() + timeout
+    pending = list(started)
+    while pending:
+        for process, record in list(pending):
+            code = process.poll()
+            if code is None:
+                continue
+            record.exit_code = code
+            record.ended_at = datetime.now(timezone.utc).isoformat()
+            pending.remove((process, record))
+            print(f"  round {round_index}: {record.key} finished (exit {code})", flush=True)
 
-    return results
+        if pending and time.monotonic() > deadline:
+            for process, record in pending:
+                process.kill()
+                process.wait()
+                record.timed_out = True
+                record.ended_at = datetime.now(timezone.utc).isoformat()
+                print(f"  round {round_index}: {record.key} timed out, killed", flush=True)
+            break
+
+        if pending:
+            time.sleep(0.5)
+
+    return [record for _, record in started]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -285,6 +314,16 @@ def main(argv: list[str] | None = None) -> int:
         "--agents",
         default="claude,codex,agy",
         help="comma-separated subset of: " + ", ".join(VENDORS),
+    )
+    parser.add_argument(
+        "--instances",
+        type=int,
+        default=1,
+        help=(
+            "concurrent invocations per vendor per round. The pilot showed why this "
+            "matters: with one each, arrivals were ~100s apart while leases were held "
+            "~25s, so no two agents were ever inside the same window"
+        ),
     )
     parser.add_argument("--pause", type=float, default=0.0, help="seconds to wait between rounds")
     args = parser.parse_args(argv)
@@ -315,12 +354,21 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"workspace: {workspace}")
     print(f"swarm:     {args.swarm}")
-    print(f"agents:    {', '.join(keys)}")
+    print(f"agents:    {', '.join(keys)} x{args.instances} = {len(keys) * args.instances}/round")
     print(f"rounds:    {args.rounds} (ttl {args.ttl}s, timeout {args.timeout}s)")
 
     for round_index in range(1, args.rounds + 1):
         record.invocations.extend(
-            run_round(round_index, keys, workspace, launcher, args.ttl, args.timeout, env)
+            run_round(
+                round_index,
+                keys,
+                args.instances,
+                workspace,
+                launcher,
+                args.ttl,
+                args.timeout,
+                env,
+            )
         )
         manifest = workspace / "_logs" / "run.json"
         manifest.write_text(
