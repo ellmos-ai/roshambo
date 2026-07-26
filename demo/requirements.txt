@@ -4,3 +4,7 @@
 # from the repo root, or PYTHONPATH=src.
 fastapi>=0.110
 uvicorn[standard]>=0.29
+# Only for demo/lambda_entry.py, the AWS Lambda Function URL entry point. Local runs
+# (demo/serve.py) never import it; a Lambda deployment package needs it and does NOT
+# need uvicorn.
+mangum>=0.19
