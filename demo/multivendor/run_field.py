@@ -152,7 +152,9 @@ class RunRecord:
     invocations: list[Invocation] = field(default_factory=list)
 
 
-def write_launcher(workspace: Path, env: dict[str, str], swarm_id: str) -> Path:
+def write_launcher(
+    workspace: Path, env: dict[str, str], swarm_id: str, interpreter: str | None = None
+) -> Path:
     """Write the one command the agents are told to run.
 
     Generated into the workspace rather than committed, because it necessarily
@@ -167,13 +169,20 @@ def write_launcher(workspace: Path, env: dict[str, str], swarm_id: str) -> Path:
     cert = env.get("ROSHAMBO_SSLROOTCERT_FILE", "").strip()
     cert_line = f'set "ROSHAMBO_SSLROOTCERT_FILE={cert}"\r\n' if cert else ""
 
-    # The base interpreter, not the virtualenv's python.exe. That file is a shim that
-    # re-reads pyvenv.cfg and hands off to the base interpreter, and inside Codex's
-    # sandbox the hand-off fails outright ("No Python at '...'"), which cost the pilot
-    # run its third vendor. Naming the real interpreter and supplying the search path
-    # ourselves removes the indirection that broke.
-    interpreter = getattr(sys, "_base_executable", None) or sys.executable
-    search_path = os.pathsep.join([sysconfig.get_paths()["purelib"], str(SRC_DIR)])
+    # Which interpreter the agents' launcher calls is not a detail. A sandboxed agent
+    # can only run what its sandbox lets it see, and Codex's could not see anything
+    # under the user profile: first the virtualenv shim failed to reach its base
+    # ("No Python at '...'"), then the base interpreter itself came back as "not
+    # recognized as ... an executable program" -- both reproduced in isolation, and
+    # both cost the pilot run its third vendor. --interpreter exists so the toolchain
+    # can be placed somewhere every participant can actually reach.
+    if interpreter:
+        # A supplied interpreter brings its own packages; mixing in this process's
+        # site-packages would put two interpreters' libraries on one search path.
+        search_path = str(SRC_DIR)
+    else:
+        interpreter = getattr(sys, "_base_executable", None) or sys.executable
+        search_path = os.pathsep.join([sysconfig.get_paths()["purelib"], str(SRC_DIR)])
 
     launcher = workspace / "rsb.cmd"
     launcher.write_text(
@@ -190,7 +199,9 @@ def write_launcher(workspace: Path, env: dict[str, str], swarm_id: str) -> Path:
     return launcher
 
 
-def prepare_workspace(workspace: Path, env: dict[str, str], swarm_id: str) -> Path:
+def prepare_workspace(
+    workspace: Path, env: dict[str, str], swarm_id: str, interpreter: str | None = None
+) -> Path:
     workspace.mkdir(parents=True, exist_ok=True)
     (workspace / "fieldkit").mkdir(exist_ok=True)
     (workspace / "tests").mkdir(exist_ok=True)
@@ -208,7 +219,7 @@ def prepare_workspace(workspace: Path, env: dict[str, str], swarm_id: str) -> Pa
             encoding="utf-8",
         )
 
-    return write_launcher(workspace, env, swarm_id)
+    return write_launcher(workspace, env, swarm_id, interpreter)
 
 
 def render_prompt(agent_id: str, workspace: Path, launcher: Path, ttl: int) -> str:
@@ -325,6 +336,15 @@ def main(argv: list[str] | None = None) -> int:
             "~25s, so no two agents were ever inside the same window"
         ),
     )
+    parser.add_argument(
+        "--interpreter",
+        default=None,
+        help=(
+            "python.exe the agents' launcher should call. Needed when a vendor sandbox "
+            "cannot see this process's interpreter -- Codex could reach nothing under "
+            "the user profile, so the toolchain has to sit somewhere it can read"
+        ),
+    )
     parser.add_argument("--pause", type=float, default=0.0, help="seconds to wait between rounds")
     args = parser.parse_args(argv)
 
@@ -343,7 +363,7 @@ def main(argv: list[str] | None = None) -> int:
             "get a writable root here; put the workspace somewhere else."
         )
 
-    launcher = prepare_workspace(workspace, env, args.swarm)
+    launcher = prepare_workspace(workspace, env, args.swarm, args.interpreter)
 
     record = RunRecord(
         swarm_id=args.swarm,
