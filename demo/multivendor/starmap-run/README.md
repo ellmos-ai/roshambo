@@ -11,7 +11,8 @@ through nothing but a CockroachDB cluster.
 **The sky is invented.** Nothing here claims to be astronomy. Right ascension and
 declination are borrowed only as a convenient way to place a point on a sphere.
 
-- `starmap.svg` — the finished map.
+- `starmap.svg` — the finished map. `starmap.png` is the same thing rendered, for
+  viewing without a renderer.
 - `frames/` — the same map rebuilt at each of the eight commits, with `frames.json`
   naming the commit, author and timestamp behind every frame.
 - `data/constellations/` — what the agents wrote.
