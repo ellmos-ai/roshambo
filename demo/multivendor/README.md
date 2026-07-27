@@ -59,9 +59,20 @@ that speak it (`../../docs/EVIDENCE-iface.md`).
 
     rsb.cmd <verb> [arguments]
 
-The first line of output is always `ROSHAMBO RESULT=GRANTED|DENIED|OK|NOOP|ERROR ...`,
-followed by JSON. Exit codes are still set (0 ok, 3 refused, 1 error) but are not the
-protocol — see the docstring in `rsb.py` for the measurement that forced that decision.
+The first line of output is always
+`ROSHAMBO RESULT=GRANTED|DENIED|OK|NOOP|EXPIRED|ERROR ...`, followed by JSON. Exit
+codes are still set (0 ok, 3 refused, 1 error) but are not the protocol — see the
+docstring in `rsb.py` for the measurement that forced that decision.
+
+`EXPIRED` separates the two things `NOOP` used to say at once. A `release` or
+`heartbeat` that fails can mean "already handed back, nothing to do" or "your lease
+lapsed and the work is somebody else's now" — and in the `starmap-2026-07-27` field
+run two agents read the second as the first and committed work that had been
+re-granted. Pass `--resource <resource>` alongside the claim id and the wrapper looks
+up the current holder: a resource that is genuinely free still answers `NOOP`, one
+that has changed hands answers `EXPIRED held_by=… expires_at=… intent=…`.
+`--resource` is consumed by the wrapper and never reaches `roshambo.cli`; it is
+needed because a takeover regenerates `claim_id`, so the old id identifies nothing.
 
 The connection string never reaches an agent. `run_field.py` strips every `ROSHAMBO_*`
 variable from the child environment and writes `rsb.cmd` into the workspace, which sets

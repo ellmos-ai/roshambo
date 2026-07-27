@@ -51,6 +51,14 @@ def _build_parser() -> argparse.ArgumentParser:
     p_claim.add_argument("--intent", required=True)
     p_claim.add_argument("--ttl", type=int, default=None, help="lease seconds")
 
+    # Reachable since 2026-07-27. `Memory.heartbeat` has existed since the initial
+    # release and README prescribes "claim/heartbeat/release", but no agent could
+    # follow that: the verb was exposed on neither the CLI nor MCP. In the field run
+    # `starmap-2026-07-27` every lease therefore ran on its TTL alone, and three
+    # lapsed mid-task and were re-granted.
+    p_heartbeat = sub.add_parser("heartbeat", help="keep a lease alive while still working")
+    p_heartbeat.add_argument("claim_id")
+
     p_release = sub.add_parser("release", help="hand a lease back")
     p_release.add_argument("claim_id")
 
@@ -128,6 +136,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                     f"{result.expires_at.isoformat()} — {result.intent}",
                 )
                 return 3
+
+            if args.command == "heartbeat":
+                alive = roshambo.heartbeat(args.claim_id)
+                _emit(
+                    {"alive": alive},
+                    args.json,
+                    "lease extended"
+                    if alive
+                    else "lease has lapsed and is not renewable — it may be somebody else's now",
+                )
+                return 0 if alive else 3
 
             if args.command == "release":
                 ok = roshambo.release(args.claim_id)

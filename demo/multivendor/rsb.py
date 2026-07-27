@@ -34,7 +34,7 @@ from the exit code alone.
 
 So every invocation prints, as its **first line**::
 
-    ROSHAMBO RESULT=GRANTED|DENIED|OK|NOOP|ERROR ...
+    ROSHAMBO RESULT=GRANTED|DENIED|OK|NOOP|EXPIRED|ERROR ...
 
 followed by the machine-readable payload. Exit codes are still set as
 ``roshambo.cli`` sets them (0 ok, 3 refused, 1 error) and remain usable by any
@@ -117,7 +117,49 @@ def _verb(args: list[str]) -> str:
     return next((a for a in args if not a.startswith("-")), "")
 
 
-def status_line(verb: str, exit_code: int, payload: object) -> str:
+RESOURCE_HINT_FLAG = "--resource"
+
+
+def take_resource_hint(args: list[str]) -> tuple[list[str], str | None]:
+    """Pull `--resource X` out of the argument list; it is ours, not the CLI's.
+
+    `release` takes a claim_id and nothing else, and after a takeover that id exists
+    nowhere: `ACQUIRE_SQL` regenerates `claim_id` on takeover, so the row that would
+    name the new holder can no longer be found from the old id. The resource is the
+    only thing that survives a takeover, so it has to come from the caller.
+    """
+    kept: list[str] = []
+    hint: str | None = None
+    i = 0
+    while i < len(args):
+        if args[i] == RESOURCE_HINT_FLAG and i + 1 < len(args):
+            hint = args[i + 1]
+            i += 2
+            continue
+        kept.append(args[i])
+        i += 1
+    return kept, hint
+
+
+def current_holder(resource: str) -> dict | None:
+    """Who holds `resource` right now, or None if it is free or unreadable.
+
+    Only ever called *after* a release has already failed, to explain why. It reports
+    and never decides, so it cannot reintroduce a check-then-act race.
+    """
+    from roshambo.cli import main as cli_main
+
+    captured = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(captured):
+            cli_main(["--json", "who-has", resource])
+        payload = json.loads(captured.getvalue())
+    except Exception:  # noqa: BLE001 - a failed diagnosis must not mask the release result
+        return None
+    return payload if isinstance(payload, dict) and payload.get("held") else None
+
+
+def status_line(verb: str, exit_code: int, payload: object, holder: dict | None = None) -> str:
     """One unambiguous line an agent can match on without parsing anything else."""
     if exit_code == 1:
         return "ROSHAMBO RESULT=ERROR"
@@ -134,8 +176,33 @@ def status_line(verb: str, exit_code: int, payload: object) -> str:
             f"intent={payload.get('intent')}"
         )
 
+    if verb == "heartbeat" and isinstance(payload, dict):
+        if payload.get("alive"):
+            return "ROSHAMBO RESULT=OK"
+        # A refused heartbeat is never "carry on". The lease is gone and deliberately
+        # not renewable (see leases.py: a lapsed lease may already belong to someone
+        # else). Saying plain OK here would repeat the NOOP mistake in a new place.
+        if holder:
+            return (
+                f"ROSHAMBO RESULT=EXPIRED held_by={holder.get('agent_id')} "
+                f"expires_at={holder.get('expires_at')} intent={holder.get('intent')}"
+            )
+        return "ROSHAMBO RESULT=EXPIRED held_by=unknown"
+
     if verb == "release" and isinstance(payload, dict):
-        return "ROSHAMBO RESULT=OK" if payload.get("released") else "ROSHAMBO RESULT=NOOP"
+        if payload.get("released"):
+            return "ROSHAMBO RESULT=OK"
+        # A failed release has two very different causes, and "NOOP" read like the
+        # harmless one. In the field run two agents were told NOOP after their lease
+        # had lapsed and been re-granted; both read it as "nothing to do" and committed
+        # work nobody was waiting for any more. Name the takeover when there is one.
+        if holder:
+            return (
+                f"ROSHAMBO RESULT=EXPIRED held_by={holder.get('agent_id')} "
+                f"expires_at={holder.get('expires_at')} intent={holder.get('intent')}"
+            )
+        # Nobody holds it: already released, or never held. That really is a no-op.
+        return "ROSHAMBO RESULT=NOOP"
 
     if verb == "who-has" and isinstance(payload, dict):
         if not payload.get("held"):
@@ -150,6 +217,7 @@ def status_line(verb: str, exit_code: int, payload: object) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    args, resource_hint = take_resource_hint(args)
     os.environ["ROSHAMBO_DSN"] = resolve_dsn(dict(os.environ))
 
     from roshambo.cli import main as cli_main
@@ -169,7 +237,16 @@ def main(argv: list[str] | None = None) -> int:
     except json.JSONDecodeError:
         payload = None
 
-    print(status_line(_verb(args), exit_code, payload))
+    verb = _verb(args)
+    holder = None
+    if resource_hint and isinstance(payload, dict):
+        lost_the_lease = (verb == "release" and not payload.get("released")) or (
+            verb == "heartbeat" and not payload.get("alive")
+        )
+        if lost_the_lease:
+            holder = current_holder(resource_hint)
+
+    print(status_line(verb, exit_code, payload, holder))
     if raw.strip():
         print(raw, end="" if raw.endswith("\n") else "\n")
     return exit_code

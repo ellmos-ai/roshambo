@@ -13,7 +13,14 @@ Run it exactly like this, as a single command:
 
 Its **first line of output** always starts with `ROSHAMBO RESULT=`. Read that line.
 Do not rely on the exit code. The possible answers are `GRANTED`, `DENIED`, `OK`,
-`NOOP` and `ERROR`.
+`NOOP`, `EXPIRED` and `ERROR`.
+
+`EXPIRED` means your lease ran out while you still thought you held it, and the work
+was given to whoever is named in `held_by=`. Stop, do not commit, and report it.
+While you are working, keep the lease alive after each finished step — not on a
+timer, only when something is actually done:
+
+    {RSB} heartbeat <your claim_id> --resource <the resource you claimed>
 
 ## What to do, once
 
@@ -69,9 +76,11 @@ Do not rely on the exit code. The possible answers are `GRANTED`, `DENIED`, `OK`
      and try again, at most three times. If it is still refused, skip the index and
      say so in your report.
 
-8. Hand back the task itself:
+8. Hand back the task itself. Name the resource too — after a takeover the claim id
+   alone identifies nothing, and the resource is what lets the answer tell you
+   whether you were taken over:
 
-       {RSB} release <the claim_id from step 3>
+       {RSB} release <the claim_id from step 3> --resource <the resource you claimed>
 
 9. Stop. Report in three lines: which task you took, whether anyone refused you and
    who, and which files you created. Do not start a second task.

@@ -506,7 +506,9 @@ did — see `Roshambo._audit` in `src/roshambo/memory.py`.
 `skills/` contains Roshambo's own [Agent Skills](https://github.com/cockroachlabs/cockroachdb-skills)
 (`SKILL.md` format), teaching an agent the two habits Roshambo depends on: call
 `recall()` before starting unfamiliar work, and follow claim/heartbeat/release lease
-discipline. [`docs/skills.md`](docs/skills.md) documents both skills and how to
+discipline. `heartbeat` is available to Python callers and, since 2026-07-27, as a CLI
+verb; it is **not** yet exposed as an MCP tool, so an MCP-only client can currently
+follow that discipline in claim/release form alone. [`docs/skills.md`](docs/skills.md) documents both skills and how to
 additionally pull in `cockroachlabs/cockroachdb-skills` for general CockroachDB
 operational knowledge.
 

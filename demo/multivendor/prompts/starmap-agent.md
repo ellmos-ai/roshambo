@@ -12,7 +12,15 @@ Run it exactly like this, as a single command:
     {RSB} <verb> [arguments]
 
 Its **first line of output** always starts with `ROSHAMBO RESULT=`. Read that line.
-Do not rely on the exit code. The answers are `GRANTED`, `DENIED`, `OK`, `NOOP`, `ERROR`.
+Do not rely on the exit code. The answers are `GRANTED`, `DENIED`, `OK`, `NOOP`,
+`EXPIRED` and `ERROR`.
+
+`EXPIRED` is the one to watch for. It means **your lease ran out and the work was
+given to somebody else while you were still holding it.** The line names them in
+`held_by=`. It is not a warning you can note and move past: from that moment the task
+is not yours, and anything you still write or commit for it is a second copy of work
+somebody else is already doing. If you ever see `EXPIRED`, stop, do not commit, and
+report it — that is the whole of your remaining job.
 
 ## What to do, once
 
@@ -44,6 +52,23 @@ Do not rely on the exit code. The answers are `GRANTED`, `DENIED`, `OK`, `NOOP`,
    task's file, never edit `TASKS.md`, and never change `render.py` — the renderer is
    fixed, and everything you write is built against it.
 
+   **Say you are still on it, every time you finish a real step.** Your lease has a
+   time limit, and it does not know whether you are working or dead. Renew it:
+
+       {RSB} heartbeat <the claim_id from step 3> --resource starmap:task:NN
+
+   Do this **immediately after each file you write**, and again after the renderer
+   check below. Not on a timer, and not in a loop while you think — only after
+   something is actually finished. A lease that is renewed by the clock says "still
+   running"; one renewed by your progress says "still getting somewhere", and that is
+   the thing worth keeping alive.
+
+   - `RESULT=OK` — the lease is yours for another stretch. Carry on.
+   - `RESULT=EXPIRED` — you were too slow, the task was re-granted, and the lease
+     **cannot be taken back** — that is deliberate, because somebody else may already
+     be building it. Stop here. Do not finish the file, do not commit. Go to step 9
+     and report that you lost the task and to whom.
+
    Check your own work before you hand it back: run
 
        {PYTHON} render.py --root . --out starmap.svg
@@ -68,16 +93,23 @@ Do not rely on the exit code. The answers are `GRANTED`, `DENIED`, `OK`, `NOOP`,
 
          git add -A
          git -c user.name="{AGENT_ID}" -c user.email="{AGENT_ID}@fieldrun.invalid" commit -m "task NN: <short description>"
-         {RSB} release <the claim_id you were just given>
+         {RSB} release <the claim_id you were just given> --resource starmap:repo
 
    - `RESULT=DENIED` — another agent is committing. Wait about fifteen seconds and try
      again, at most four times. If it is still refused, **leave your files exactly as they
      are, do not commit**, and say so in your report. Someone else will pick them up. Do
      not try to work around it.
 
-8. Hand back the task itself:
+8. Hand back the task itself. Name the resource as well as the claim id — after a
+   takeover the claim id alone no longer identifies anything, and naming the resource
+   is what lets the answer tell you whether you were taken over:
 
-       {RSB} release <the claim_id from step 3>
+       {RSB} release <the claim_id from step 3> --resource starmap:task:NN
+
+   - `RESULT=OK` — handed back cleanly.
+   - `RESULT=EXPIRED` — it had already been taken from you. Say so in your report,
+     and say who holds it now.
+   - `RESULT=NOOP` — the lease was already gone and nobody holds it. Harmless.
 
 9. Stop. Report in four lines: which task you took, whether anyone refused you and who,
    which files you created, and whether you managed to commit. Do not start a second task.
