@@ -3,7 +3,7 @@
 > Roshambo is a multi-agent coordinator built on CockroachDB and AWS Bedrock: serializable leases so two agents never claim the same work, and a distributed vector index so an agent can recall earlier attempts and outcomes before starting.
 
 Last-checked: 2026-07-27
-Verification: 79 passed, 45 skipped (124 total pytest tests verified)
+Verification: 94 passed, 45 skipped (139 total pytest tests verified)
 
 ## Overview
 
@@ -26,6 +26,11 @@ Verification: 79 passed, 45 skipped (124 total pytest tests verified)
 2. **Negative Memory**: Stores outcome of failed and succeeded attempts so agents avoid re-running failing paths.
 3. **Vector Index**: 1024-dimensional vector embeddings with cosine similarity search scoped by `swarm_id`.
 4. **MCP Protocol**: Native MCP server interface (`roshambo-mcp`).
+5. **Coordination through shared state, not a protocol**: no message format two agents must
+   both implement, which is why it survives a vendor boundary. Messages are not excluded --
+   a note on a claim row is still shared state. The lock-file bootstrap regress disappears
+   because `INSERT ... ON CONFLICT` on the primary key IS the mutual exclusion, one layer
+   below the tool, holding across machines where `O_EXCL` does not.
 
 ## Usage & Commands
 
@@ -73,7 +78,11 @@ Measured runs, not claims. Each file records what was executed and what was not:
   (`demo/multivendor/PROTOCOL.md`). Records the pilot that produced zero collisions and why,
   and that a lease says nobody is working on something rather than that it still needs doing.
   What the three vendors built is kept verbatim in `demo/multivendor/fieldkit-run/`
-  (44 tests, 44 passed).
+  (44 tests, 44 passed). A second, visual run (`starmap-2026-07-27`) reached 32 cross-vendor
+  contention events over 47 collisions, 0 defects; its artefact is a night sky held as data
+  plus a deterministic renderer, so every commit can be re-rendered into a time-lapse frame
+  (`demo/multivendor/starmap-run/frames/`). Both runs' duplicated tasks trace to a lease set
+  shorter than the work, diagnosed by an agent in its own failure trail.
 - `docs/EVIDENCE-core.md`, `docs/EVIDENCE-aws.md`, `docs/EVIDENCE-iface.md`: per-lane runs.
 - `docs/screenshots/`: screenshots of the demo app live against the cloud cluster.
 

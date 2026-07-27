@@ -4,6 +4,67 @@ All notable changes to this project are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project has not yet cut a
 tagged release, so everything below is under `[Unreleased]`.
 
+## [0.1.4] - 2026-07-27
+
+### Added
+
+- **Coordination through shared state, not through a protocol** (READMEs, both languages).
+  Roshambo has no message format two agents must both implement, and that is the
+  mechanism rather than a gap: a protocol needs both sides to speak it, shared state only
+  needs each side to read it. It does not exclude messages — a note on a claim row is
+  still shared state — so the two use cases are two levels of one tool: strangers use bare
+  `claim`/`release` plus `trails`; a team that knows each other adds a queue and a note.
+- **Where the lock-file regress ends.** Any file-based lock must protect its own lock
+  file; in the file world that ends at `O_EXCL`, which is atomic only locally. With a
+  database it disappears: `INSERT … ON CONFLICT (swarm_id, resource)` against the primary
+  key *is* the mutual exclusion, one layer below the tool, and it holds across machines.
+  Cited with a documented lost update from this system's operations log — as a documented
+  incident, not as something measured for this submission.
+- **Assignment is not observance, and where observance can be enforced.** Outside the
+  database a claim is advisory. Inside it — `trails`, `decisions`, and messages if added —
+  observance is technically enforceable, because claim and resource share a transaction
+  domain. Stated as available, not as built.
+- `demo/multivendor/starmap/`: a second joint project the agents build, this one visual.
+  Data plus a deterministic renderer, so any past state can be rebuilt exactly;
+  `timelapse.py` walks the git history and re-renders every commit into a numbered frame
+  carrying the real commit timestamp. `tests/test_starmap_render.py` (15 tests) holds the
+  two load-bearing properties: the renderer never fails, and two renders are byte-identical.
+- `demo/multivendor/starmap-run/`: what three vendors built — ten constellations, two
+  rendering modules, eight commits, eight frames. Kept verbatim, excluded from ruff.
+
+### Measured
+
+- Star map run: **32 cross-vendor contention events**, 47 genuine collisions on task
+  resources, 47 of 47 denials naming the holder, **0 defects**, 0 stale. The git
+  repository is reported apart as the serialization point (12 denials, 11 contention
+  events after retries collapse).
+- Capability landed where it was not assigned: all twelve tasks were claimable by anyone,
+  and the projection went to OpenAI's agent — whose documented strength is formal accuracy
+  — while the palette went to Anthropic's rather than Google's. One result in each
+  direction, both reported.
+
+### Corrected
+
+- The first run's duplicated task was written up as "the holder had finished and
+  released". The evidence never supported that: `release` is audited without its resource,
+  so the log cannot distinguish a lease handed back from one that lapsed. An agent in the
+  star map run recorded in its own `failure` trail that its 120-second lease expired
+  mid-work and its task was re-claimed underneath it. **The duplicates in both runs are a
+  lease shorter than the work** — a configuration finding, not a design one. Both
+  write-ups now say so.
+- `collect_evidence.py` only knew the fieldkit resource names, so the star map's
+  collisions were landing in the catch-all bucket. Naming only; re-running the earlier
+  swarm reproduced every published figure unchanged.
+- One pre-registered definition in `PROTOCOL.md` was tautological and is corrected in a
+  dated addendum rather than silently edited.
+
+### Known limitations recorded
+
+- **A commit is coarser than a claim.** `starmap:repo` was claimed eleven times and
+  produced eight commits, because `git add -A` sweeps up other agents' finished work.
+- Task 12 of the star map was never claimed; the run ended with work still on the list.
+- Three vendors, but still **one machine**.
+
 ## [0.1.3] - 2026-07-27
 
 ### Added
