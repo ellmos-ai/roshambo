@@ -80,8 +80,15 @@ exactly why, in a `failure` trail it wrote itself:
 > `claude-code-1` afterwards, so a competing `02-*.json` may appear
 
 The work simply took longer than the lease it was granted under. That is a configuration
-finding — the TTL was set shorter than the task — not a fault in the coordination, and it
-is the honest explanation for the duplicate constellations left in `data/`.
+finding — the TTL was set shorter than the task — not a fault in the coordination.
+
+**Only one of the three actually duplicated anything.** `data/constellations/` holds two
+files for task 01 and exactly one for task 02; task 04 produced a single `projection.py`.
+The agent quoted above worried a competing `02-*.json` might appear, and it did not. The
+second check the protocol asks for — claim the task *and* look whether its file already
+exists — caught two of the three cases. It missed task 01 because the second holder looked
+before the first had written anything. The surviving duplicate is left in place rather
+than tidied away.
 
 **A commit is coarser than a claim.** `starmap:repo` was claimed eleven times but produced
 only eight commits, because each agent ran `git add -A` and so swept up whatever other

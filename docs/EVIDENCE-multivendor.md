@@ -417,8 +417,15 @@ first run's write-up. An agent diagnosed it itself, in the `failure` trail:
 > `starmap:task:02` was re-claimed by `claude-code-1` afterwards
 
 The lease was shorter than the work. That is a configuration finding — the TTL was set to
-120 seconds for tasks that took several minutes — not a fault in the coordination, and it
-is the honest explanation for the duplicate constellations left in the artefact.
+120 seconds for tasks that took several minutes — not a fault in the coordination.
+
+Only one of those three re-grants actually duplicated anything: the artefact holds two
+files for task 01, one for task 02, and a single `projection.py` for task 04. The second
+check the protocol asks for — claim the task *and* look whether its file already exists —
+caught two of the three, and missed task 01 only because the second holder looked before
+the first had written anything. That is also the sharper form of the weaker statement
+above: the lease cannot tell finished from unstarted, so something else has to, and here
+that something else worked twice out of three times.
 
 **A commit is coarser than a claim.** `starmap:repo` was claimed eleven times and produced
 eight commits, because each agent ran `git add -A` and swept up whatever others had
