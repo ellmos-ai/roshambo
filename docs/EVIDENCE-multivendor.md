@@ -264,3 +264,68 @@ first, and the duplicate is left in the artifact rather than tidied away.
 - `decide` was not exercised; it has no CLI subcommand.
 - Eleven trails were written and none recorded a failure, so the negative-memory half of
   the system was exercised only on its success path in this run.
+
+---
+
+# A second run, this time one you can watch
+
+The run above settles the coordination claim, but twelve text modules are a poor thing to
+show anyone. The second joint project is a **night sky** — nine constellations plus three
+modules that change how the map is drawn — built by the same three vendors under the same
+protocol, in a fresh swarm.
+
+Two properties were designed in from the start, both about letting a reader *check* the
+run rather than be told about it.
+
+**The artefact is data plus a fixed renderer.** The agents write JSON and, for three of
+the tasks, a Python module the renderer picks up if it imports. `render.py` is ours and
+does not change during a run, so any past state can be rebuilt exactly.
+
+**The git history is the timeline.** Each agent commits its own work, so `timelapse.py`
+can walk the history in a throwaway clone, re-render every commit, and write numbered
+frames carrying the real commit timestamp. The sequence is therefore evidence rather than
+an edit: each frame names the commit it came from, and because the renderer is
+deterministic anyone can reproduce it. The camera is pinned to the final framing,
+measured once at HEAD, so the sky fills a still frame instead of the view zooming out on
+every addition.
+
+The sky is invented. Nothing in it claims to be astronomy, so no coordinate in the
+artefact is asserted as a fact.
+
+## Three kinds of work in one picture
+
+Nine of the twelve tasks add constellation data. The other three are cut along capability
+lines rather than along vendor lines:
+
+- **the projection** — a stereographic mapping from the celestial sphere to the canvas,
+  the pole guarded, the visible range normalised: mathematics.
+- **the palette** — colour by spectral class, a radius curve for magnitude, and a
+  background the colours read against: graphic design.
+- **the title block and legend** — what the map says about itself: structure and wording.
+
+All three sat in the same ordered list as the data tasks and were claimable by anyone, so
+who ended up doing which was **earned, not assigned**. That is a weaker claim than "we
+gave the mathematics to the mathematics model", and an honest one — and it produced one
+result in each direction, which is reported below rather than smoothed over.
+
+## Specification compliance, checked rather than assumed
+
+Every constellation file was checked against its task: all nine stay inside the right
+ascension band their task assigned, all keep declination within ±60°, and all carry
+between six and eight stars as specified. No file had to be repaired, and the renderer
+skipped none of them.
+
+## A correction to our own reading
+
+The first render looked wrong — everything crowded into a wedge — and the projection
+module was the obvious suspect. It was not at fault. Read properly, the agents' stereographic
+projection is correct: centred on the pole, guarded against division at the pole, and
+normalised so the southern visible limit meets the shorter canvas edge. The crowding was
+simply that only part of the sky had been populated at that moment.
+
+What the episode did expose is a boundary that had been left in the wrong place. Deciding
+*which point goes where relative to the others* is the projection's job; deciding *how
+much of the canvas the result occupies* is the renderer's. The renderer now fits the
+projected drawing with one uniform scale and one translation, which preserves the agents'
+mathematics exactly and changes only the framing. Recorded here because the first
+diagnosis was wrong and the correction is more useful than the mistake.
