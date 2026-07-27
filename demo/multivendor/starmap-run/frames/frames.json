@@ -1,0 +1,102 @@
+{
+  "frames": [
+    {
+      "index": 1,
+      "sha": "6fbfe09d3c8145099c09f0c9aee672a34123d082",
+      "committed_at": "2026-07-26T23:43:14+00:00",
+      "subject": "an empty sky",
+      "author": "roshambo field run",
+      "file": "frame-0001.svg",
+      "constellations": 0,
+      "stars": 0,
+      "segments": 0,
+      "skipped": []
+    },
+    {
+      "index": 2,
+      "sha": "20b35e5573f5adbd0a51d548167520b147b5ab3e",
+      "committed_at": "2026-07-26T23:49:47+00:00",
+      "subject": "task 01: Add The Silver Weasel constellation",
+      "author": "agy-3",
+      "file": "frame-0002.svg",
+      "constellations": 6,
+      "stars": 40,
+      "segments": 42,
+      "skipped": []
+    },
+    {
+      "index": 3,
+      "sha": "bf40a375bcdc8315b730bf5b0c986d4f4b45f883",
+      "committed_at": "2026-07-26T23:51:11+00:00",
+      "subject": "task 05: create The Weaver's Shuttle constellation",
+      "author": "roshambo field run",
+      "file": "frame-0003.svg",
+      "constellations": 6,
+      "stars": 40,
+      "segments": 42,
+      "skipped": []
+    },
+    {
+      "index": 4,
+      "sha": "8cbcb35506cfdb83bd79b49cb9e6856604ee442d",
+      "committed_at": "2026-07-26T23:51:42+00:00",
+      "subject": "task 01: The Salt Hook, a fishhook of 8 stars in RA 0-40",
+      "author": "claude-code-2",
+      "file": "frame-0004.svg",
+      "constellations": 7,
+      "stars": 47,
+      "segments": 50,
+      "skipped": []
+    },
+    {
+      "index": 5,
+      "sha": "8aeea802bbc51c384a26458f7ca9b9f173e54d93",
+      "committed_at": "2026-07-26T23:57:52+00:00",
+      "subject": "task 11: add The Silver Compass constellation",
+      "author": "agy-2",
+      "file": "frame-0005.svg",
+      "constellations": 8,
+      "stars": 53,
+      "segments": 57,
+      "skipped": []
+    },
+    {
+      "index": 6,
+      "sha": "65f8e71418be00752b454c76a29783433a6f4d29",
+      "committed_at": "2026-07-26T23:59:57+00:00",
+      "subject": "task 09: The Ferryman's Oar, an 8-star oar in RA 240-280",
+      "author": "claude-code-2",
+      "file": "frame-0006.svg",
+      "constellations": 9,
+      "stars": 61,
+      "segments": 66,
+      "skipped": []
+    },
+    {
+      "index": 7,
+      "sha": "d9ecf82e617312f55d659caa4f6573a835780f15",
+      "committed_at": "2026-07-27T00:00:57+00:00",
+      "subject": "task 10: The Bone Ladder, an 8-star ladder in RA 280-320",
+      "author": "claude-code-1",
+      "file": "frame-0007.svg",
+      "constellations": 10,
+      "stars": 69,
+      "segments": 76,
+      "skipped": []
+    },
+    {
+      "index": 8,
+      "sha": "3cb40e5b4c76b22c40311ece11b1effc4deccced",
+      "committed_at": "2026-07-27T00:03:03+00:00",
+      "subject": "task 08: the look of the sky -- spectral colours, magnitude curve, night ground",
+      "author": "claude-code-3",
+      "file": "frame-0008.svg",
+      "constellations": 10,
+      "stars": 69,
+      "segments": 76,
+      "skipped": []
+    }
+  ],
+  "first_commit": "2026-07-26T23:43:14+00:00",
+  "last_commit": "2026-07-27T00:03:03+00:00"
+}

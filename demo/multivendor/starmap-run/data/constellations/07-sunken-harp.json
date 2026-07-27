@@ -1,0 +1,23 @@
+{
+  "name": "The Sunken Harp",
+  "abbr": "Hrp",
+  "stars": [
+    {"id": "hrp-a", "ra": 208.0, "dec": 46.0, "mag": 1.1, "spectral": "O"},
+    {"id": "hrp-b", "ra": 215.5, "dec": 38.2, "mag": 3.4, "spectral": "A"},
+    {"id": "hrp-c", "ra": 223.0, "dec": 30.5, "mag": 2.2, "spectral": "F"},
+    {"id": "hrp-d", "ra": 206.5, "dec": 33.0, "mag": 3.9, "spectral": "B"},
+    {"id": "hrp-e", "ra": 212.0, "dec": 12.0, "mag": 0.4, "spectral": "G"},
+    {"id": "hrp-f", "ra": 226.5, "dec": 14.5, "mag": 2.9, "spectral": "M"},
+    {"id": "hrp-g", "ra": 219.0, "dec": 6.5, "mag": 4.3, "spectral": "K"}
+  ],
+  "lines": [
+    ["hrp-a", "hrp-d"],
+    ["hrp-d", "hrp-e"],
+    ["hrp-e", "hrp-g"],
+    ["hrp-g", "hrp-f"],
+    ["hrp-f", "hrp-c"],
+    ["hrp-c", "hrp-b"],
+    ["hrp-b", "hrp-a"],
+    ["hrp-b", "hrp-g"]
+  ]
+}

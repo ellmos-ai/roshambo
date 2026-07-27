@@ -1,0 +1,21 @@
+{
+  "name": "The Obsidian Mirror",
+  "abbr": "Mir",
+  "stars": [
+    {"id": "mir-a", "ra": 165.0, "dec": 30.0, "mag": 0.8, "spectral": "O"},
+    {"id": "mir-b", "ra": 178.0, "dec": 45.0, "mag": 1.9, "spectral": "B"},
+    {"id": "mir-c", "ra": 192.0, "dec": 32.0, "mag": 2.7, "spectral": "A"},
+    {"id": "mir-d", "ra": 185.0, "dec": 12.0, "mag": 3.4, "spectral": "F"},
+    {"id": "mir-e", "ra": 170.0, "dec": 15.0, "mag": 4.1, "spectral": "G"},
+    {"id": "mir-f", "ra": 180.0, "dec": 25.0, "mag": 4.8, "spectral": "K"}
+  ],
+  "lines": [
+    ["mir-a", "mir-b"],
+    ["mir-b", "mir-c"],
+    ["mir-c", "mir-d"],
+    ["mir-d", "mir-e"],
+    ["mir-e", "mir-a"],
+    ["mir-a", "mir-f"],
+    ["mir-c", "mir-f"]
+  ]
+}

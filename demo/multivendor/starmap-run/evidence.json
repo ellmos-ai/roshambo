@@ -1,0 +1,300 @@
+{
+  "ttl_seconds": 120,
+  "counts": {
+    "trails": 14,
+    "trail_failures": 1,
+    "audit_rows": 143,
+    "distinct_agents": 9
+  },
+  "task_resources": {
+    "denials": 47,
+    "genuine_collisions": 47,
+    "contention_events": 47,
+    "cross_vendor_collisions": 32,
+    "cross_vendor_events": 32,
+    "stale_denials": 0,
+    "defects": [],
+    "denials_naming_a_holder": 47,
+    "pairs": [
+      {
+        "denied": "codex-1",
+        "holder": "claude-code-2",
+        "count": 2
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "claude-code-2",
+        "count": 2
+      },
+      {
+        "denied": "codex-3",
+        "holder": "claude-code-2",
+        "count": 2
+      },
+      {
+        "denied": "codex-1",
+        "holder": "claude-code-3",
+        "count": 2
+      },
+      {
+        "denied": "codex-2",
+        "holder": "claude-code-2",
+        "count": 2
+      },
+      {
+        "denied": "codex-3",
+        "holder": "claude-code-3",
+        "count": 2
+      },
+      {
+        "denied": "codex-2",
+        "holder": "claude-code-1",
+        "count": 2
+      },
+      {
+        "denied": "agy-2",
+        "holder": "agy-3",
+        "count": 2
+      },
+      {
+        "denied": "agy-1",
+        "holder": "agy-3",
+        "count": 2
+      },
+      {
+        "denied": "claude-code-3",
+        "holder": "claude-code-2",
+        "count": 1
+      },
+      {
+        "denied": "codex-3",
+        "holder": "codex-1",
+        "count": 1
+      },
+      {
+        "denied": "codex-2",
+        "holder": "codex-1",
+        "count": 1
+      },
+      {
+        "denied": "codex-2",
+        "holder": "codex-3",
+        "count": 1
+      },
+      {
+        "denied": "agy-2",
+        "holder": "codex-3",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-3",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "agy-1",
+        "holder": "codex-3",
+        "count": 1
+      },
+      {
+        "denied": "agy-1",
+        "holder": "agy-2",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "codex-3",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "agy-2",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "agy-1",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-2",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "agy-2",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "codex-2",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "agy-3",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "agy-2",
+        "holder": "claude-code-2",
+        "count": 1
+      },
+      {
+        "denied": "agy-1",
+        "holder": "claude-code-3",
+        "count": 1
+      },
+      {
+        "denied": "agy-2",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "agy-1",
+        "holder": "claude-code-2",
+        "count": 1
+      },
+      {
+        "denied": "agy-3",
+        "holder": "claude-code-2",
+        "count": 1
+      },
+      {
+        "denied": "agy-1",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "agy-3",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "codex-3",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "codex-1",
+        "holder": "claude-code-1",
+        "count": 1
+      },
+      {
+        "denied": "codex-2",
+        "holder": "agy-2",
+        "count": 1
+      },
+      {
+        "denied": "agy-3",
+        "holder": "agy-2",
+        "count": 1
+      },
+      {
+        "denied": "codex-3",
+        "holder": "agy-2",
+        "count": 1
+      },
+      {
+        "denied": "codex-1",
+        "holder": "agy-2",
+        "count": 1
+      }
+    ],
+    "resources": [
+      "starmap:task:01",
+      "starmap:task:02",
+      "starmap:task:03",
+      "starmap:task:04",
+      "starmap:task:05",
+      "starmap:task:06",
+      "starmap:task:08",
+      "starmap:task:09",
+      "starmap:task:10",
+      "starmap:task:11"
+    ]
+  },
+  "index_resource": {
+    "denials": 12,
+    "genuine_collisions": 12,
+    "contention_events": 11,
+    "cross_vendor_collisions": 8,
+    "cross_vendor_events": 7,
+    "stale_denials": 0,
+    "defects": [],
+    "denials_naming_a_holder": 12,
+    "pairs": [
+      {
+        "denied": "claude-code-3",
+        "holder": "agy-2",
+        "count": 2
+      },
+      {
+        "denied": "agy-1",
+        "holder": "agy-2",
+        "count": 2
+      },
+      {
+        "denied": "agy-1",
+        "holder": "claude-code-2",
+        "count": 2
+      },
+      {
+        "denied": "claude-code-3",
+        "holder": "codex-1",
+        "count": 1
+      },
+      {
+        "denied": "agy-3",
+        "holder": "codex-1",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-3",
+        "holder": "agy-3",
+        "count": 1
+      },
+      {
+        "denied": "agy-2",
+        "holder": "agy-1",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-3",
+        "holder": "agy-1",
+        "count": 1
+      },
+      {
+        "denied": "claude-code-1",
+        "holder": "claude-code-2",
+        "count": 1
+      }
+    ],
+    "resources": [
+      "starmap:repo"
+    ]
+  },
+  "other_resources": {
+    "denials": 0,
+    "genuine_collisions": 0,
+    "contention_events": 0,
+    "cross_vendor_collisions": 0,
+    "cross_vendor_events": 0,
+    "stale_denials": 0,
+    "defects": [],
+    "denials_naming_a_holder": 0,
+    "pairs": [],
+    "resources": []
+  },
+  "scenario": "starmap",
+  "resource_names": {
+    "task_prefix": "starmap:task:",
+    "serialization": "starmap:repo"
+  }
+}

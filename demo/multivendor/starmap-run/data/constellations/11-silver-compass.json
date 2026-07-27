@@ -1,0 +1,21 @@
+{
+  "name": "The Silver Compass",
+  "abbr": "Com",
+  "stars": [
+    {"id": "com-a", "ra": 325.0, "dec": 15.0, "mag": 1.1, "spectral": "B"},
+    {"id": "com-b", "ra": 332.5, "dec": 38.0, "mag": 2.4, "spectral": "A"},
+    {"id": "com-c", "ra": 348.0, "dec": 22.0, "mag": 3.0, "spectral": "F"},
+    {"id": "com-d", "ra": 341.0, "dec": -5.0, "mag": 2.7, "spectral": "K"},
+    {"id": "com-e", "ra": 355.2, "dec": 8.5, "mag": 4.1, "spectral": "M"},
+    {"id": "com-f", "ra": 338.0, "dec": 18.0, "mag": 3.8, "spectral": "G"}
+  ],
+  "lines": [
+    ["com-a", "com-b"],
+    ["com-b", "com-c"],
+    ["com-c", "com-d"],
+    ["com-d", "com-a"],
+    ["com-a", "com-f"],
+    ["com-f", "com-c"],
+    ["com-c", "com-e"]
+  ]
+}

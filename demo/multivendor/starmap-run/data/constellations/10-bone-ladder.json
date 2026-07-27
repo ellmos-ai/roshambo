@@ -1,0 +1,26 @@
+{
+  "name": "The Bone Ladder",
+  "abbr": "Bld",
+  "stars": [
+    {"id": "bld-a", "ra": 286.2, "dec": -43.0, "mag": 1.4, "spectral": "M"},
+    {"id": "bld-b", "ra": 310.4, "dec": -42.0, "mag": 2.9, "spectral": "K"},
+    {"id": "bld-c", "ra": 287.0, "dec": -31.0, "mag": 3.6, "spectral": "K"},
+    {"id": "bld-d", "ra": 311.2, "dec": -30.2, "mag": 2.1, "spectral": "G"},
+    {"id": "bld-e", "ra": 288.6, "dec": -19.0, "mag": 4.2, "spectral": "F"},
+    {"id": "bld-f", "ra": 312.4, "dec": -18.2, "mag": 3.1, "spectral": "A"},
+    {"id": "bld-g", "ra": 290.5, "dec": -8.0, "mag": 2.5, "spectral": "B"},
+    {"id": "bld-h", "ra": 313.8, "dec": -7.0, "mag": 0.2, "spectral": "O"}
+  ],
+  "lines": [
+    ["bld-a", "bld-c"],
+    ["bld-c", "bld-e"],
+    ["bld-e", "bld-g"],
+    ["bld-b", "bld-d"],
+    ["bld-d", "bld-f"],
+    ["bld-f", "bld-h"],
+    ["bld-a", "bld-b"],
+    ["bld-c", "bld-d"],
+    ["bld-e", "bld-f"],
+    ["bld-g", "bld-h"]
+  ]
+}

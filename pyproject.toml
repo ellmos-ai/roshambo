@@ -59,7 +59,7 @@ target-version = "py310"
 # what they produced, not code this project maintains -- reformatting it would
 # falsify the record. Its own tests are run and reported separately in
 # docs/EVIDENCE-multivendor.md.
-extend-exclude = ["demo/multivendor/fieldkit-run"]
+extend-exclude = ["demo/multivendor/fieldkit-run", "demo/multivendor/starmap-run"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

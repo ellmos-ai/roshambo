@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="A sky invented by three agents">
+<rect width="1600" height="900" fill="#080b1a"/>
+
+<text x="24" y="878" fill="#6b7ba8" font-size="16" font-family="monospace">01/8  23:43:14Z  an empty sky</text>
+<!-- constellations=0 stars=0 segments=0 dropped_segments=0 skipped=none modules={'projection': 'fallback (equirectangular)', 'style': 'fallback', 'legend': 'fallback (none)'} -->
+</svg>

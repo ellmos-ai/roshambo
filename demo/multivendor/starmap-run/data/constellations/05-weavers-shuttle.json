@@ -1,0 +1,19 @@
+{
+  "name": "The Weaver's Shuttle",
+  "abbr": "Wsh",
+  "stars": [
+    {"id": "wsh-a", "ra": 125.0, "dec": 15.0, "mag": 0.8, "spectral": "O"},
+    {"id": "wsh-b", "ra": 138.5, "dec": 32.0, "mag": 1.9, "spectral": "B"},
+    {"id": "wsh-c", "ra": 152.0, "dec": 15.0, "mag": 2.4, "spectral": "A"},
+    {"id": "wsh-d", "ra": 138.5, "dec": -2.0, "mag": 3.1, "spectral": "F"},
+    {"id": "wsh-e", "ra": 132.0, "dec": 15.0, "mag": 3.8, "spectral": "K"},
+    {"id": "wsh-f", "ra": 145.0, "dec": 15.0, "mag": 4.2, "spectral": "M"}
+  ],
+  "lines": [
+    ["wsh-a", "wsh-b"],
+    ["wsh-b", "wsh-c"],
+    ["wsh-c", "wsh-d"],
+    ["wsh-d", "wsh-a"],
+    ["wsh-e", "wsh-f"]
+  ]
+}

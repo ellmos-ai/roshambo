@@ -1,0 +1,23 @@
+{
+  "name": "The Salt Hook",
+  "abbr": "Shk",
+  "stars": [
+    {"id": "shk-eye",     "ra":  8.0, "dec":  10.0, "mag": 2.4, "spectral": "K"},
+    {"id": "shk-shank-a", "ra": 10.4, "dec":   2.6, "mag": 3.6, "spectral": "A"},
+    {"id": "shk-shank-b", "ra": 13.2, "dec":  -9.8, "mag": 1.6, "spectral": "B"},
+    {"id": "shk-bend",    "ra": 16.1, "dec": -22.1, "mag": 3.1, "spectral": "F"},
+    {"id": "shk-keel",    "ra": 22.3, "dec": -32.0, "mag": 0.4, "spectral": "M"},
+    {"id": "shk-throat",  "ra": 29.6, "dec": -25.8, "mag": 2.9, "spectral": "G"},
+    {"id": "shk-point",   "ra": 33.2, "dec": -12.2, "mag": 1.1, "spectral": "O"},
+    {"id": "shk-barb",    "ra": 28.7, "dec": -17.8, "mag": 4.2, "spectral": "M"}
+  ],
+  "lines": [
+    ["shk-eye", "shk-shank-a"],
+    ["shk-shank-a", "shk-shank-b"],
+    ["shk-shank-b", "shk-bend"],
+    ["shk-bend", "shk-keel"],
+    ["shk-keel", "shk-throat"],
+    ["shk-throat", "shk-point"],
+    ["shk-point", "shk-barb"]
+  ]
+}

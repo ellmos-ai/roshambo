@@ -1,0 +1,22 @@
+{
+  "name": "The Cracked Bell",
+  "abbr": "Bel",
+  "stars": [
+    {"id": "bel-a", "ra": 60.0, "dec": 51.5, "mag": 1.6, "spectral": "B"},
+    {"id": "bel-b", "ra": 50.5, "dec": 43.0, "mag": 2.9, "spectral": "A"},
+    {"id": "bel-c", "ra": 69.5, "dec": 43.5, "mag": 2.4, "spectral": "F"},
+    {"id": "bel-d", "ra": 45.0, "dec": 26.0, "mag": 3.8, "spectral": "K"},
+    {"id": "bel-e", "ra": 75.0, "dec": 25.0, "mag": 0.9, "spectral": "O"},
+    {"id": "bel-f", "ra": 61.5, "dec": 30.5, "mag": 4.4, "spectral": "M"},
+    {"id": "bel-g", "ra": 55.5, "dec": 17.5, "mag": 3.2, "spectral": "G"}
+  ],
+  "lines": [
+    ["bel-a", "bel-b"],
+    ["bel-a", "bel-c"],
+    ["bel-b", "bel-d"],
+    ["bel-c", "bel-e"],
+    ["bel-d", "bel-g"],
+    ["bel-g", "bel-e"],
+    ["bel-a", "bel-f"]
+  ]
+}

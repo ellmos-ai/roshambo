@@ -1,0 +1,25 @@
+{
+  "name": "The Ferryman's Oar",
+  "abbr": "Oar",
+  "stars": [
+    {"id": "oar-tip", "ra": 261.0, "dec": -56.0, "mag": 0.6, "spectral": "A"},
+    {"id": "oar-blade-low", "ra": 248.0, "dec": -45.0, "mag": 3.2, "spectral": "K"},
+    {"id": "oar-blade-high", "ra": 274.0, "dec": -45.0, "mag": 2.4, "spectral": "F"},
+    {"id": "oar-neck", "ra": 261.0, "dec": -34.0, "mag": 1.8, "spectral": "B"},
+    {"id": "oar-rowlock", "ra": 252.0, "dec": -24.0, "mag": 4.1, "spectral": "M"},
+    {"id": "oar-grip-low", "ra": 264.0, "dec": -23.0, "mag": 2.9, "spectral": "G"},
+    {"id": "oar-grip-high", "ra": 269.0, "dec": -12.0, "mag": 3.6, "spectral": "K"},
+    {"id": "oar-knob", "ra": 276.0, "dec": -4.0, "mag": 1.3, "spectral": "O"}
+  ],
+  "lines": [
+    ["oar-tip", "oar-blade-low"],
+    ["oar-blade-low", "oar-neck"],
+    ["oar-neck", "oar-blade-high"],
+    ["oar-blade-high", "oar-tip"],
+    ["oar-tip", "oar-neck"],
+    ["oar-neck", "oar-grip-low"],
+    ["oar-grip-low", "oar-rowlock"],
+    ["oar-grip-low", "oar-grip-high"],
+    ["oar-grip-high", "oar-knob"]
+  ]
+}

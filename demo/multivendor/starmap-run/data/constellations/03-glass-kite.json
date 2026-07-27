@@ -1,0 +1,25 @@
+{
+  "name": "The Glass Kite",
+  "abbr": "Glk",
+  "stars": [
+    {"id": "glk-crown", "ra": 99.0, "dec": 46.0, "mag": 1.1, "spectral": "B"},
+    {"id": "glk-west", "ra": 86.0, "dec": 27.0, "mag": 2.7, "spectral": "F"},
+    {"id": "glk-heart", "ra": 99.5, "dec": 25.0, "mag": 0.5, "spectral": "A"},
+    {"id": "glk-east", "ra": 113.5, "dec": 28.0, "mag": 3.2, "spectral": "K"},
+    {"id": "glk-keel", "ra": 100.0, "dec": 5.0, "mag": 2.0, "spectral": "G"},
+    {"id": "glk-tail", "ra": 106.0, "dec": -12.0, "mag": 3.8, "spectral": "M"},
+    {"id": "glk-ribbon", "ra": 96.0, "dec": -29.0, "mag": 4.6, "spectral": "O"}
+  ],
+  "lines": [
+    ["glk-crown", "glk-west"],
+    ["glk-west", "glk-keel"],
+    ["glk-keel", "glk-east"],
+    ["glk-east", "glk-crown"],
+    ["glk-west", "glk-heart"],
+    ["glk-heart", "glk-east"],
+    ["glk-crown", "glk-heart"],
+    ["glk-heart", "glk-keel"],
+    ["glk-keel", "glk-tail"],
+    ["glk-tail", "glk-ribbon"]
+  ]
+}
