@@ -54,6 +54,21 @@ timer, only when something is actually done:
    different task already exists, leave it exactly as it is, even if you think it is
    wrong. It belongs to another agent.
 
+   **Say you are still on it after each file you finish** — your lease has a time
+   limit and cannot tell working from dead:
+
+       {RSB} heartbeat <the claim_id from step 3> --resource <the resource you claimed>
+
+   Do this when a file is actually written, not on a timer and not while you think.
+   A lease renewed by the clock says "still running"; renewed by finished work it
+   says "still getting somewhere".
+
+   - `RESULT=OK` — the lease is yours for another stretch. Carry on.
+   - `RESULT=EXPIRED` — you were too slow and the task was re-granted. The lease
+     **cannot be taken back**; somebody else may already be building it. Stop here,
+     do not write the second file, do not commit. Report that you lost the task and
+     to whom.
+
 6. Record what happened, so the others can learn from it:
 
        {RSB} remember "task NN" --approach "<what you implemented, one sentence>" --outcome success --evidence "<which files you created>" --agent-id {AGENT_ID}

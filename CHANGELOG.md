@@ -4,6 +4,42 @@ All notable changes to this project are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project has not yet cut a
 tagged release, so everything below is under `[Unreleased]`.
 
+## [0.1.5] - 2026-07-27
+
+### Added
+
+- **`heartbeat` is reachable.** It has existed in `memory.py` since the initial release
+  and the README prescribes claim/heartbeat/release discipline, but the verb was exposed
+  on neither the CLI nor MCP — so no agent could follow that instruction. Every lease in
+  the `starmap-2026-07-27` field run therefore ran on its TTL alone, and three lapsed
+  mid-task and were re-granted. Now a CLI subcommand (`roshambo heartbeat <claim_id>`,
+  exit 0 alive / 3 lapsed). MCP still lacks it, and the README now says so rather than
+  leaving the same gap unmarked for MCP clients.
+
+### Changed
+
+- **`EXPIRED` splits what `NOOP` used to say at once** (`demo/multivendor/rsb.py`). A
+  failed `release` meant either "already handed back" or "your lease lapsed and the work
+  is somebody else's now"; two field agents read the second as the first and committed
+  work that had been re-granted. The wrapper now takes `--resource`, looks up the current
+  holder, and answers `EXPIRED held_by=… expires_at=… intent=…` — but only when somebody
+  actually holds it. A genuinely free resource still answers `NOOP`; conflating the two
+  would have swapped one misleading answer for another. `--resource` is required because
+  `ACQUIRE_SQL` regenerates `claim_id` on takeover, so the old id identifies nothing.
+- **The demo prompts anchor the heartbeat to finished work**, not to a timer: renewed by
+  the clock a lease says "still running", renewed by progress it says "still getting
+  somewhere". Both prompts now also state that a refused heartbeat means stop and report
+  — without that, the new verb would be ignored exactly as `NOOP` was.
+
+### Known limitations recorded
+
+- `since=<takeover time>` is not reported: `Claim` carries no `acquired_at` and
+  `HOLDER_SQL` does not select it. `expires_at` is shown instead and named as such,
+  rather than widening the core model for one word of prose.
+- Whether the change removes the re-grants is not yet measured — that needs a repeat
+  field run. The remaining race (checking whether a file exists before writing it) is
+  untouched and stays documented in `docs/EVIDENCE-multivendor.md`.
+
 ## [0.1.4] - 2026-07-27
 
 ### Added
