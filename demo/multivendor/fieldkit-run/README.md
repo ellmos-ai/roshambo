@@ -38,16 +38,20 @@ it is what the lease handed out.
 
 ## The one duplicate, and why it is left in
 
-Task 10 was granted twice: to `claude-code-3` at 23:07:52, and to `agy-1` at 23:11:29
-after the first holder had finished and released. `INDEX.md` therefore carries the task
-10 line twice — and that duplicate is left in place because it is the visible
-consequence of a real limitation:
+Task 10 was granted twice: to `claude-code-3` at 23:07:52 and to `agy-1` at 23:11:29 —
+217 seconds later, well past the 120-second lease. `INDEX.md` therefore carries the task
+10 line twice, and the duplicate is left in place rather than tidied away.
 
-**A lease says nobody is working on this. It does not say the work still needs doing.**
+**Corrected after the star map run.** This first said the gap was because "the first
+holder had finished and released", which the evidence does not support: `release` is
+audited without its resource, so the audit log cannot tell a lease handed back from a
+lease that lapsed. In the later run an agent recorded in its own `failure` trail that its
+120-second lease expired mid-work and its task was re-claimed underneath it. The plainer
+reading is that the lease was shorter than the work — a configuration finding.
 
-Both checks are necessary. The agent protocol asks for both (claim *and* check whether
-the module file already exists), but the lease alone cannot enforce the second, and here
-the second was skipped. This was first seen in the pilot run and is recorded in
+The weaker statement still holds on its own: **a lease says nobody is working on this, it
+does not say the work still needs doing.** Both checks are necessary and the lease can
+only enforce the first. It is simply not what produced this duplicate. Recorded in
 `../PROTOCOL.md` and `../../../docs/EVIDENCE-multivendor.md` rather than quietly cleaned
 up.
 

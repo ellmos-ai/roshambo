@@ -246,12 +246,23 @@ those agents spending their remaining turn trying to run `pytest`, which their s
 could not reach, and stopping before the registration step. The modules and their tests
 exist and pass; only the registry line is missing.
 
-And the limitation from the pilot appeared again, this time with a visible consequence.
-`fieldkit:task:10` was granted twice: to `claude-code-3` at 23:07:52, and to `agy-1` at
-23:11:29, after the first holder had finished and released it. `INDEX.md` therefore
-carries the task 10 line twice. **A lease says nobody is working on this; it does not say
-the work still needs doing.** Both checks are necessary, the lease can only enforce the
-first, and the duplicate is left in the artifact rather than tidied away.
+And a task was granted twice, with a visible consequence. `fieldkit:task:10` went to
+`claude-code-3` at 23:07:52 and to `agy-1` at 23:11:29 — 217 seconds later, well past the
+120-second lease. `INDEX.md` therefore carries the task 10 line twice, and the duplicate
+is left in the artifact rather than tidied away.
+
+**Corrected after the second run:** this was first written up as "the first holder had
+finished and released", which the evidence does not support. `release` is audited without
+its resource (`memory.py`, `agent_id=None, resource=None`), so the audit log cannot
+distinguish a lease handed back from a lease that lapsed. The star map run settled which
+one actually happens: an agent there recorded in its own `failure` trail that its
+120-second lease **expired mid-work** and its task was re-claimed underneath it. The
+plainer reading of both runs is therefore that the lease was simply shorter than the work
+— a configuration finding rather than a design one.
+
+The weaker statement still stands on its own: a lease says nobody is working on something,
+not that the work still needs doing. Both checks are necessary and the lease can only
+enforce the first. But it is not what produced these duplicates.
 
 ### What this does not show
 
@@ -329,3 +340,100 @@ much of the canvas the result occupies* is the renderer's. The renderer now fits
 projected drawing with one uniform scale and one translation, which preserves the agents'
 mathematics exactly and changes only the framing. Recorded here because the first
 diagnosis was wrong and the correction is more useful than the mistake.
+
+## The measured star map run
+
+Swarm `starmap-2026-07-27`, two rounds, three vendors, three concurrent invocations of
+each per round — eighteen sessions, all of which completed. Lease TTL 120 seconds. Same
+counting rules, same collector; only the resource names differ (`starmap:task:NN` and
+`starmap:repo`), and adding those names to the collector was verified not to move a single
+figure in the fieldkit run above.
+
+### The result
+
+**Thirty-two cross-vendor contention events** — more than twice the first run, on a task
+list of the same size, because the sky tasks take longer and therefore overlap more.
+
+| On task resources | |
+|---|---|
+| Denials recorded | 47 |
+| Genuine collisions | 47 |
+| Distinct contention events (retries collapsed) | 47 |
+| **Cross-vendor collisions / events** | **32 / 32** |
+| Denials that named the holder | 47 of 47 |
+| Stale denials, excluded by the TTL window rule | 0 |
+| Defects (a denial naming somebody other than the live holder) | **0** |
+
+Every denial fell inside a live lease this time, so none were excluded. Thirty-two of the
+forty-seven crossed a vendor boundary; the remaining fifteen were between two instances of
+the same vendor and prove concurrency rather than heterogeneity, which is why they are not
+folded into the headline.
+
+**On the git repository**, the serialization point this run created on purpose and which
+is never summed into the above: 12 denials, 12 genuine collisions, **11** distinct
+contention events — the one place in either run where an agent retried a blocked resource
+and the retry collapsed as the rules require — 8 cross-vendor collisions across 7 events,
+0 defects.
+
+Fourteen trails were written and **one of them records a failure**, so unlike the first
+run the negative-memory half was exercised on its own path rather than only on the success
+path. Its text is quoted below; it is the most informative single artefact of the run.
+
+### The work that came out
+
+Ten constellations and two rendering modules, over eight commits spanning twenty minutes
+of real time, each commit re-rendered into a frame carrying its own timestamp
+(`demo/multivendor/starmap-run/frames/`). Every constellation respects the right ascension
+band its task assigned, keeps declination within ±60°, and carries six to eight stars as
+specified; the renderer skipped none of them.
+
+Task 12, the legend, was never claimed — the run ended with work still on the list.
+
+### Capability, earned rather than assigned
+
+The three tasks cut along capability lines were claimable by anyone, and the result went
+one way in each direction:
+
+- **the projection went to OpenAI's agent** (`codex-3`), the vendor whose documented
+  strength is formal and mathematical accuracy. It produced a correct stereographic
+  projection, centred on the pole, guarded against the division that blows up there.
+- **the palette went to Anthropic's agent** (`claude-code-3`), not to Google's, whose
+  documented strength graphic work is. It is nonetheless real design work: its own
+  comments explain that the spectral colours are pushed past true blackbody values because
+  "at a radius of two pixels on a dark ground an honest colour is simply not visible".
+
+One run cannot show that a capability-based division of labour is optimal, and nothing
+here claims it does. What it does show is that three kinds of work — mathematics, visual
+design, and data — landed in one artefact without anyone allocating them.
+
+### What went wrong, and where
+
+**Three tasks were granted twice** (01, 02, 04), which is the finding that corrects the
+first run's write-up. An agent diagnosed it itself, in the `failure` trail:
+
+> `starmap:repo` was DENIED five times in a row (codex-1, agy-3, agy-2, agy-1, agy-2); per
+> protocol I left `data/constellations/02-cracked-bell.json` uncommitted in the working
+> tree for someone else to pick up. Also note: my 120s task lease expired mid-run and
+> `starmap:task:02` was re-claimed by `claude-code-1` afterwards
+
+The lease was shorter than the work. That is a configuration finding — the TTL was set to
+120 seconds for tasks that took several minutes — not a fault in the coordination, and it
+is the honest explanation for the duplicate constellations left in the artefact.
+
+**A commit is coarser than a claim.** `starmap:repo` was claimed eleven times and produced
+eight commits, because each agent ran `git add -A` and swept up whatever others had
+finished but not yet committed. The lease serialised the git index correctly; the
+granularity of the write did not match the granularity of the claim. Two of the eight
+commits therefore carry the fallback identity rather than an agent's, because the agent
+that made them was committing someone else's work as well as its own.
+
+**And the protocol held under pressure.** The same agent that lost its lease also lost the
+repository five times in a row to four different agents across three vendors. It did what
+it was told: left the file uncommitted, recorded why, and stopped rather than forcing the
+commit. A later agent picked the file up. Nothing was lost.
+
+### What this run still does not show
+
+Everything the first run did not show still applies — no AWS, no Bedrock, no semantic
+claim, and three vendors on **one machine**. In addition, task 12 was never done, and the
+legend module the renderer would have used therefore does not exist.
