@@ -34,7 +34,7 @@ from the exit code alone.
 
 So every invocation prints, as its **first line**::
 
-    ROSHAMBO RESULT=GRANTED|DENIED|OK|NOOP|EXPIRED|ERROR ...
+    ROSHAMBO RESULT=REGISTERED|GRANTED|DENIED|OK|NOOP|EXPIRED|ERROR ...
 
 followed by the machine-readable payload. Exit codes are still set as
 ``roshambo.cli`` sets them (0 ok, 3 refused, 1 error) and remain usable by any
@@ -163,6 +163,12 @@ def status_line(verb: str, exit_code: int, payload: object, holder: dict | None 
     """One unambiguous line an agent can match on without parsing anything else."""
     if exit_code == 1:
         return "ROSHAMBO RESULT=ERROR"
+
+    if verb == "register-agent" and isinstance(payload, dict):
+        return (
+            f"ROSHAMBO RESULT=REGISTERED agent_id={payload.get('agent_id')} "
+            f"framework={payload.get('framework')} host={payload.get('host')}"
+        )
 
     if verb == "claim" and isinstance(payload, dict):
         if payload.get("granted"):

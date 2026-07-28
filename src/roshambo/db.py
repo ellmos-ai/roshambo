@@ -205,6 +205,9 @@ def apply_schema(
                 if _is_tolerable_setting_error(statement, exc):
                     results.append((f"skipped: {_short(exc)}", label))
                     continue
+                if _is_duplicate_identity_constraint(statement, exc):
+                    results.append((f"skipped: {_short(exc)}", label))
+                    continue
                 raise SchemaError(f"failed to apply {label!r}: {exc}") from exc
 
         mismatches = find_vector_index_mismatches(conn)
@@ -348,6 +351,16 @@ def _is_tolerable_setting_error(statement: str, exc: psycopg.Error) -> bool:
         return False
     message = str(exc).lower()
     return "unknown cluster setting" in message or "unimplemented" in message
+
+
+def _is_duplicate_identity_constraint(statement: str, exc: psycopg.Error) -> bool:
+    """Allow only the two named, idempotent identity constraints to pre-exist."""
+    normalised = " ".join(statement.split()).lower()
+    expected = (
+        "alter table claims add constraint claims_agent_fk",
+        "alter table audit_log add constraint audit_agent_fk",
+    )
+    return normalised.startswith(expected) and getattr(exc, "sqlstate", None) == "42710"
 
 
 def _short(exc: BaseException) -> str:

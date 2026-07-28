@@ -235,7 +235,7 @@ Two MCP paths onto the same cluster, deliberately kept separate:
   human-adjacent path: schema introspection, ad-hoc analysis, read-only by default.
   See [`docs/mcp-managed.md`](docs/mcp-managed.md).
 - **`roshambo-mcp`** (this repository) — the agent-adjacent path: a narrow, checked set
-  of six verbs, no free-form SQL tool. See
+  of eight verbs, no free-form SQL tool. See
   [Security](#security-no-free-form-sql-on-purpose) below.
 
 ## Status
@@ -328,7 +328,7 @@ claude mcp add --transport stdio roshambo \
   -- roshambo-mcp
 ```
 
-Then, inside Claude Code, run `/mcp` to confirm it connected and lists six tools.
+Then, inside Claude Code, run `/mcp` to confirm it connected and lists eight tools.
 
 ## See it running
 
@@ -417,14 +417,16 @@ Everything is read from the environment under the `ROSHAMBO_` prefix
 | `ROSHAMBO_BEDROCK_MODEL_ID` | no | `amazon.titan-embed-text-v2:0` | Bedrock embedding model |
 | `ROSHAMBO_S3_BUCKET` | no | unset | Bucket for artifact storage; required only if you use `put_artifact` |
 
-## The six tools
+## The eight tools
 
-`roshambo-mcp` exposes exactly these six verbs — no more, and no free-form query tool
+`roshambo-mcp` exposes exactly these eight verbs — no more, and no free-form query tool
 besides `recall`'s embedded vector search:
 
 | Tool | Purpose |
 |---|---|
+| `register_agent(agent_id, framework, host, capabilities?)` | Bind a stable, host-qualified caller id to the registry before claiming work. Historical audit rows retain immutable framework/host snapshots if the registry later changes. |
 | `claim(resource, agent_id, intent, ttl_seconds?)` | Take an exclusive, serializable lease. A denial (`ClaimDenied`) names who holds it and what they intend — it is a normal result, not an error to retry blindly. |
+| `heartbeat(claim_id)` | Extend a still-live lease after concrete progress. `alive=false` means stop: an expired lease is never resurrected. |
 | `release(claim_id)` | Free a claim so another agent can pick up the resource. |
 | `remember(topic, approach, outcome, evidence, ...)` | Record what was tried and how it ended. `outcome` is one of `success` / `failure` / `abandoned` / `inconclusive` — failures are written exactly like successes. |
 | `recall(query, limit?, outcomes?)` | Vector search over past trails — finds a prior attempt even when the query is worded differently than the original entry. Call this *before* `claim()` on anything not obviously routine. |
@@ -463,10 +465,10 @@ mandatory `provenance` on a decision. Ad-hoc inspection and analytics belong to 
 no custom proxy) — see [`docs/mcp-managed.md`](docs/mcp-managed.md). `roshambo-mcp`
 stays the checked, narrow write path.
 
-Every call through `claim` / `release` / `remember` / `recall` / `decide` is also
-appended to an append-only `audit_log` table (`swarm_id`, `agent_id`, verb, resource,
-`allowed`, `reason`, `latency_ms`) as a second, independent record of what the swarm
-did — see `Roshambo._audit` in `src/roshambo/memory.py`.
+Every checked call is also appended to an append-only `audit_log` table. Its agent id
+references the registry, while `framework_snapshot` and `host_snapshot` preserve the
+identity observed when the event occurred even if the current registry entry changes.
+See `Roshambo._audit` in `src/roshambo/memory.py`.
 
 ## Known limitations
 
@@ -506,9 +508,8 @@ did — see `Roshambo._audit` in `src/roshambo/memory.py`.
 `skills/` contains Roshambo's own [Agent Skills](https://github.com/cockroachlabs/cockroachdb-skills)
 (`SKILL.md` format), teaching an agent the two habits Roshambo depends on: call
 `recall()` before starting unfamiliar work, and follow claim/heartbeat/release lease
-discipline. `heartbeat` is available to Python callers and, since 2026-07-27, as a CLI
-verb; it is **not** yet exposed as an MCP tool, so an MCP-only client can currently
-follow that discipline in claim/release form alone. [`docs/skills.md`](docs/skills.md) documents both skills and how to
+discipline. `heartbeat` is available through Python, CLI, and MCP.
+[`docs/skills.md`](docs/skills.md) documents both skills and how to
 additionally pull in `cockroachlabs/cockroachdb-skills` for general CockroachDB
 operational knowledge.
 

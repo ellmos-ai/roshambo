@@ -12,8 +12,8 @@ Run it exactly like this, as a single command:
     {RSB} <verb> [arguments]
 
 Its **first line of output** always starts with `ROSHAMBO RESULT=`. Read that line.
-Do not rely on the exit code. The answers are `GRANTED`, `DENIED`, `OK`, `NOOP`,
-`EXPIRED` and `ERROR`.
+Do not rely on the exit code. The answers are `REGISTERED`, `GRANTED`, `DENIED`,
+`OK`, `NOOP`, `EXPIRED` and `ERROR`.
 
 `EXPIRED` is the one to watch for. It means **your lease ran out and the work was
 given to somebody else while you were still holding it.** The line names them in
@@ -23,6 +23,13 @@ somebody else is already doing. If you ever see `EXPIRED`, stop, do not commit, 
 report it — that is the whole of your remaining job.
 
 ## What to do, once
+
+0. Register this invocation before touching shared work:
+
+       {RSB} register-agent --agent-id {AGENT_ID} --framework {FRAMEWORK} --host {HOST_LABEL}
+
+   Continue only on `RESULT=REGISTERED`. This binds the stable agent id to this
+   framework and host for the run's immutable audit evidence.
 
 1. Read `TASKS.md` in your working directory. Tasks are numbered `01` to `12`.
 

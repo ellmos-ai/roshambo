@@ -244,7 +244,7 @@ Zwei MCP-Pfade auf denselben Cluster, bewusst getrennt gehalten:
   menschennahe Pfad: Schema-Introspektion, Ad-hoc-Analyse, standardmäßig nur lesend.
   Siehe [`docs/mcp-managed.md`](docs/mcp-managed.md).
 - **`roshambo-mcp`** (dieses Repository) — der agentennahe Pfad: eine schmale, geprüfte
-  Menge von sechs Verben, kein Werkzeug für freies SQL. Siehe
+  Menge von acht Verben, kein Werkzeug für freies SQL. Siehe
   [Sicherheit](#sicherheit-kein-freies-sql-mit-absicht) weiter unten.
 
 ## Stand
@@ -342,7 +342,7 @@ claude mcp add --transport stdio roshambo \
 ```
 
 Danach in Claude Code `/mcp` ausführen, um zu bestätigen, dass die Verbindung steht und
-sechs Werkzeuge gelistet werden.
+acht Werkzeuge gelistet werden.
 
 ## In Aktion sehen
 
@@ -433,14 +433,16 @@ funktioniert:
 | `ROSHAMBO_BEDROCK_MODEL_ID` | nein | `amazon.titan-embed-text-v2:0` | Bedrock-Embedding-Modell |
 | `ROSHAMBO_S3_BUCKET` | nein | nicht gesetzt | Bucket für Artefaktspeicher; nur erforderlich bei Nutzung von `put_artifact` |
 
-## Die sechs Werkzeuge
+## Die acht Werkzeuge
 
-`roshambo-mcp` bietet genau diese sechs Verben — nicht mehr, und kein Werkzeug für freie
+`roshambo-mcp` bietet genau diese acht Verben — nicht mehr, und kein Werkzeug für freie
 Abfragen außer `recall`s eingebetteter Vektorsuche:
 
 | Werkzeug | Zweck |
 |---|---|
+| `register_agent(agent_id, framework, host, capabilities?)` | Bindet eine stabile, hostqualifizierte Aufrufer-ID an das Register, bevor Arbeit beansprucht wird. Historische Audit-Zeilen behalten unveränderliche Framework-/Host-Snapshots, falls sich das Register später ändert. |
 | `claim(resource, agent_id, intent, ttl_seconds?)` | Nimmt ein exklusives, serialisierbares Lease. Eine Ablehnung (`ClaimDenied`) nennt, wer es hält und was beabsichtigt ist — ein normales Ergebnis, kein Fehler, der blind wiederholt werden sollte. |
+| `heartbeat(claim_id)` | Verlängert ein noch gültiges Lease nach konkretem Fortschritt. `alive=false` bedeutet Stopp: Ein abgelaufenes Lease wird nie wiederbelebt. |
 | `release(claim_id)` | Gibt einen Claim frei, damit ein anderer Agent die Ressource übernehmen kann. |
 | `remember(topic, approach, outcome, evidence, ...)` | Zeichnet auf, was versucht wurde und wie es ausging. `outcome` ist eines von `success` / `failure` / `abandoned` / `inconclusive` — Fehlschläge werden genauso geschrieben wie Erfolge. |
 | `recall(query, limit?, outcomes?)` | Vektorsuche über vergangene Trails — findet einen früheren Versuch auch dann, wenn die Anfrage anders formuliert ist als der ursprüngliche Eintrag. *Vor* `claim()` aufrufen, bei allem, was nicht offensichtlich Routine ist. |
@@ -481,10 +483,11 @@ Trail ohne Evidenz schreiben, die verpflichtende `provenance` bei einer Entschei
 Audit-Logging, kein eigener Proxy) — siehe [`docs/mcp-managed.md`](docs/mcp-managed.md).
 `roshambo-mcp` bleibt der geprüfte, schmale Schreibpfad.
 
-Jeder Aufruf über `claim` / `release` / `remember` / `recall` / `decide` wird zusätzlich
-an eine append-only `audit_log`-Tabelle angehängt (`swarm_id`, `agent_id`, Verb,
-Ressource, `allowed`, `reason`, `latency_ms`) als zweite, unabhängige Aufzeichnung
-dessen, was der Schwarm getan hat — siehe `Roshambo._audit` in `src/roshambo/memory.py`.
+Jeder geprüfte Aufruf wird zusätzlich an eine append-only `audit_log`-Tabelle
+angehängt. Die Agenten-ID referenziert das Register; `framework_snapshot` und
+`host_snapshot` bewahren die beim Ereignis beobachtete Identität, selbst wenn der
+aktuelle Registereintrag später geändert wird. Siehe `Roshambo._audit` in
+`src/roshambo/memory.py`.
 
 ## Bekannte Einschränkungen
 

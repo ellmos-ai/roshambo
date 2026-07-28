@@ -3,6 +3,18 @@
 Append under a dated heading. Do not edit another lane's files; write the request here
 instead.
 
+## 2026-07-28 — host-evidence identity implementation
+
+Decision C is implemented across the coordinated interface: the registry owns a stable
+`agent_key`; claims and audit events reference it and retain immutable framework/host
+snapshots; CLI/MCP expose registration and heartbeat; CLI exposes decisions; field-run
+ids are host-qualified and register before work. Existing callers remain explicit legacy
+identities (`unregistered` / `unknown`) rather than receiving invented provenance.
+
+Static/offline verification is complete. A real two-machine field run was not performed
+and remains the external acceptance gate. Keep git outside that future run's critical
+path and archive the result afterwards.
+
 ## 2026-07-25 — core lane
 
 ### Done

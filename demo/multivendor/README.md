@@ -60,7 +60,7 @@ that speak it (`../../docs/EVIDENCE-iface.md`).
     rsb.cmd <verb> [arguments]
 
 The first line of output is always
-`ROSHAMBO RESULT=GRANTED|DENIED|OK|NOOP|EXPIRED|ERROR ...`, followed by JSON. Exit
+`ROSHAMBO RESULT=REGISTERED|GRANTED|DENIED|OK|NOOP|EXPIRED|ERROR ...`, followed by JSON. Exit
 codes are still set (0 ok, 3 refused, 1 error) but are not the protocol — see the
 docstring in `rsb.py` for the measurement that forced that decision.
 
@@ -107,6 +107,7 @@ Then set the environment and go:
     python run_field.py \
         --workspace <somewhere outside this repo> \
         --swarm <a fresh swarm id> \
+        --host-label <stable-public-host-label> \
         --scenario starmap \
         --rounds 2 --instances 3 --ttl 120 --timeout 900 \
         --interpreter <toolchain-dir>/venv/Scripts/python.exe
@@ -121,6 +122,12 @@ And, for the star map, turn the run's own history into frames:
 
 Use a **fresh swarm id** per run. `swarm_id` is the leading key column on every table,
 so a new id gives a clean slate without deleting anything.
+
+Use a different stable `--host-label` on every machine. The runner appends it to every
+agent id, and the first command in each prompt registers that id with its framework and
+host. Claims and audit events retain immutable snapshots; `collect_evidence.py` therefore
+reports cross-host collisions/events from the grant and denial database rows, not from
+an agent log or driver assertion. A raw count of two host labels alone is not acceptance.
 
 ## What `--instances` is for
 

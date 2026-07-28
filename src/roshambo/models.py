@@ -30,6 +30,8 @@ class Claim:
     agent_id: str
     intent: str
     expires_at: datetime
+    framework: str = "unknown"
+    host: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,8 @@ class ClaimDenied:
     held_by: str
     intent: str
     expires_at: datetime
+    framework: str = "unknown"
+    host: str = "unknown"
 
 
 @dataclass(frozen=True)

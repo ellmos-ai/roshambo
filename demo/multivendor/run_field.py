@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -163,6 +164,7 @@ class Invocation:
 @dataclass
 class RunRecord:
     swarm_id: str
+    host_label: str
     ttl: int
     started_at: str
     rounds: int
@@ -288,6 +290,8 @@ def prepare_workspace(
 
 def render_prompt(
     agent_id: str,
+    framework: str,
+    host_label: str,
     workspace: Path,
     launcher: Path,
     ttl: int,
@@ -297,6 +301,8 @@ def render_prompt(
     template = SCENARIOS[scenario]["prompt"].read_text(encoding="utf-8")
     return (
         template.replace("{AGENT_ID}", agent_id)
+        .replace("{FRAMEWORK}", framework)
+        .replace("{HOST_LABEL}", host_label)
         .replace("{WORKDIR}", str(workspace))
         .replace("{RSB}", str(launcher))
         .replace("{TTL}", str(ttl))
@@ -322,6 +328,7 @@ def run_round(
     ttl: int,
     timeout: int,
     env: dict[str, str],
+    host_label: str,
     scenario: str = "fieldkit",
     interpreter: str | None = None,
 ) -> list[Invocation]:
@@ -334,9 +341,19 @@ def run_round(
 
     for key, instance in plan:
         vendor = VENDORS[key]
-        agent_id = vendor.agent_id if instances == 1 else f"{vendor.agent_id}-{instance}"
+        base_id = vendor.agent_id if instances == 1 else f"{vendor.agent_id}-{instance}"
+        agent_id = f"{base_id}@{host_label}"
         label = key if instances == 1 else f"{key}-{instance}"
-        prompt = render_prompt(agent_id, workspace, launcher, ttl, scenario, interpreter)
+        prompt = render_prompt(
+            agent_id,
+            key,
+            host_label,
+            workspace,
+            launcher,
+            ttl,
+            scenario,
+            interpreter,
+        )
         log_path = workspace / "_logs" / f"round{round_index:02d}-{label}.log"
         handle = log_path.open("w", encoding="utf-8", errors="replace")
         record = Invocation(
@@ -392,6 +409,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, help="run directory, outside the repo")
     parser.add_argument("--swarm", required=True, help="ROSHAMBO_SWARM_ID for this run")
+    parser.add_argument(
+        "--host-label",
+        required=True,
+        help=(
+            "stable public label for this machine (letters, digits, dot, dash, underscore); "
+            "included in every agent id and immutable audit snapshot"
+        ),
+    )
     parser.add_argument("--rounds", type=int, default=4)
     parser.add_argument("--ttl", type=int, default=120, help="lease seconds")
     parser.add_argument("--timeout", type=int, default=600, help="seconds per invocation")
@@ -428,6 +453,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pause", type=float, default=0.0, help="seconds to wait between rounds")
     args = parser.parse_args(argv)
 
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", args.host_label):
+        raise SystemExit(
+            "--host-label must be 1-64 characters: letters, digits, dot, dash or underscore"
+        )
+
     keys = [k.strip() for k in args.agents.split(",") if k.strip()]
     unknown = [k for k in keys if k not in VENDORS]
     if unknown:
@@ -447,6 +477,7 @@ def main(argv: list[str] | None = None) -> int:
 
     record = RunRecord(
         swarm_id=args.swarm,
+        host_label=args.host_label,
         ttl=args.ttl,
         started_at=datetime.now(timezone.utc).isoformat(),
         rounds=args.rounds,
@@ -454,6 +485,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"workspace: {workspace}")
     print(f"swarm:     {args.swarm}")
+    print(f"host:      {args.host_label}")
     print(f"scenario:  {args.scenario}")
     print(f"agents:    {', '.join(keys)} x{args.instances} = {len(keys) * args.instances}/round")
     print(f"rounds:    {args.rounds} (ttl {args.ttl}s, timeout {args.timeout}s)")
@@ -469,6 +501,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.ttl,
                 args.timeout,
                 env,
+                args.host_label,
                 args.scenario,
                 args.interpreter,
             )
@@ -478,6 +511,7 @@ def main(argv: list[str] | None = None) -> int:
             json.dumps(
                 {
                     "swarm_id": record.swarm_id,
+                    "host_label": record.host_label,
                     "ttl": record.ttl,
                     "started_at": record.started_at,
                     "rounds": record.rounds,

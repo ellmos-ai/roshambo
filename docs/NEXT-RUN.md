@@ -1,6 +1,15 @@
 # The next field run: what is ready, what is not, and what a two-machine run would take
 
-**Status: no run was performed.** The token budget needed to recover, and the deadline is
+**2026-07-28 implementation update:** the host-evidence architecture described below is
+now implemented locally. Stable agent keys are registry-backed; claims and audit rows
+carry immutable framework/host snapshots; `register-agent` and `decide` are reachable
+from the CLI; registration and heartbeat are reachable from MCP; `run_field.py` requires
+`--host-label`; and host-qualified ids do not collide across machines. The offline suite
+passes. **No true two-machine run was performed**, so that external acceptance gate stays
+open. The original 2026-07-27 analysis below is preserved as the decision record; its
+"not built" statements describe the earlier baseline, not current source.
+
+**Original status: no run was performed.** The token budget needed to recover, and the deadline is
 far enough away that waiting costs nothing. This document exists so that whoever starts
 the next run — in a week or in a month — does not have to repeat the analysis.
 
@@ -225,12 +234,9 @@ No shared filesystem, no shared git remote, no open ports between the machines.
 
 ## What is open
 
-- **No two-machine run has been performed**, and none should be until the host question in
-  part 1 of section 2 is answered. Running it first would produce a result that cannot be
-  evidenced from the witness the project relies on.
-- The agent-id collision must be fixed before any two-machine run.
-- `decide` still has no CLI subcommand, and `register_agent` now joins it as a library verb
-  no agent can reach. Both are gaps between what the library offers and what an agent can
-  actually do; the heartbeat was the third and is fixed.
+- **No two-machine run has been performed.** The host-evidence and agent-id prerequisites
+  are implemented, but the result itself must still be produced on two real machines.
+- Keep git outside that future run's coordination-critical path; collect and archive the
+  result after the database-backed run.
 - Task 12 of the star map (the legend) was never claimed, so the renderer's third optional
   hook has still only been exercised by its tests.

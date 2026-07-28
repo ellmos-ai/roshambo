@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project has not yet cut a
 tagged release, so everything below is under `[Unreleased]`.
 
+## [0.1.6] - 2026-07-28
+
+### Added
+
+- Registry-backed stable agent identities: a caller-selected `agent_key` is unique per
+  swarm, while the original UUID remains the internal registry row id.
+- Immutable `framework_snapshot` and `host_snapshot` evidence on claims and audit events,
+  with foreign keys from caller-visible ids to the agent registry and an additive upgrade
+  path for existing clusters.
+- `register-agent` and `decide` CLI verbs; `register_agent` and `heartbeat` MCP tools.
+- Required `--host-label` field-run identity, host-qualified agent ids, registration as
+  the first prompt action, and database-derived cross-host collision/event evidence.
+
+### Verification boundary
+
+- Offline suite and static checks pass. A real two-machine field run was deliberately not
+  fabricated and remains the external acceptance gate.
+
 ## [0.1.5] - 2026-07-27
 
 ### Added

@@ -34,8 +34,9 @@ VENDOR_OF = {
 
 
 def vendor_of(agent_id: str) -> str | None:
-    """Vendor behind an agent id, ignoring the `-N` concurrent-instance suffix."""
-    return VENDOR_OF.get(re.sub(r"-\d+$", "", agent_id or ""))
+    """Vendor behind a host-qualified id, ignoring its `-N` instance suffix."""
+    base_id = (agent_id or "").split("@", 1)[0]
+    return VENDOR_OF.get(re.sub(r"-\d+$", "", base_id))
 
 
 # Which resource names belong to which class, per joint project. This is naming, not
@@ -58,6 +59,8 @@ class Event:
     resource: str | None
     allowed: bool
     reason: str | None
+    framework_snapshot: str | None = None
+    host_snapshot: str | None = None
 
 
 @dataclass
@@ -67,6 +70,8 @@ class Collision:
     holder: str
     granted_at: datetime
     denied_at: datetime
+    denied_host: str | None = None
+    holder_host: str | None = None
 
     @property
     def gap_seconds(self) -> float:
@@ -83,6 +88,17 @@ class Collision:
         denied = vendor_of(self.denied_agent)
         holder = vendor_of(self.holder)
         return bool(denied and holder and denied != holder)
+
+    @property
+    def cross_host(self) -> bool:
+        """True only for two known, different immutable host snapshots."""
+        return bool(
+            self.denied_host
+            and self.holder_host
+            and self.denied_host != "unknown"
+            and self.holder_host != "unknown"
+            and self.denied_host != self.holder_host
+        )
 
 
 @dataclass
@@ -113,6 +129,16 @@ class Analysis:
             {(c.resource, c.granted_at, c.denied_agent) for c in self.cross_vendor_collisions}
         )
 
+    @property
+    def cross_host_collisions(self) -> list[Collision]:
+        return [c for c in self.collisions if c.cross_host]
+
+    @property
+    def cross_host_events(self) -> int:
+        return len(
+            {(c.resource, c.granted_at, c.denied_agent) for c in self.cross_host_collisions}
+        )
+
 
 def fetch_events(dsn: str, swarm_id: str) -> list[Event]:
     import psycopg
@@ -120,7 +146,8 @@ def fetch_events(dsn: str, swarm_id: str) -> list[Event]:
     with psycopg.connect(dsn) as conn, conn.cursor() as cur:
         cur.execute(
             """
-            SELECT created_at, agent_id, resource, allowed, reason
+            SELECT created_at, agent_id, resource, allowed, reason,
+                   framework_snapshot, host_snapshot
             FROM audit_log
             WHERE swarm_id = %s AND verb = 'claim'
             ORDER BY created_at ASC
@@ -147,6 +174,12 @@ def fetch_counts(dsn: str, swarm_id: str) -> dict[str, int]:
                 "SELECT count(DISTINCT agent_id) FROM audit_log "
                 "WHERE swarm_id = %s AND agent_id IS NOT NULL",
             ),
+            (
+                "distinct_hosts",
+                "SELECT count(DISTINCT host_snapshot) FROM audit_log "
+                "WHERE swarm_id = %s AND verb = 'claim' AND host_snapshot IS NOT NULL "
+                "AND host_snapshot <> 'unknown'",
+            ),
         ):
             cur.execute(sql, (swarm_id,))
             counts[label] = cur.fetchone()[0]
@@ -171,14 +204,18 @@ def analyse(
     window = timedelta(seconds=ttl_seconds)
     analyses = {name: Analysis(name) for name in ("task", "index", "other")}
     # Most recent grant seen per resource, walking forward in time.
-    last_grant: dict[str, tuple[str, datetime]] = {}
+    last_grant: dict[str, tuple[str, datetime, str | None]] = {}
 
     for event in events:
         resource = event.resource or ""
         bucket = analyses[classify(event.resource, names)]
 
         if event.allowed:
-            last_grant[resource] = (event.agent_id or "?", event.created_at)
+            last_grant[resource] = (
+                event.agent_id or "?",
+                event.created_at,
+                event.host_snapshot,
+            )
             continue
 
         bucket.denials += 1
@@ -194,7 +231,7 @@ def analyse(
             bucket.stale_denials += 1
             continue
 
-        holder, granted_at = grant
+        holder, granted_at, holder_host = grant
         if event.created_at - granted_at > window:
             bucket.stale_denials += 1
             continue
@@ -220,6 +257,8 @@ def analyse(
                 holder=holder,
                 granted_at=granted_at,
                 denied_at=event.created_at,
+                denied_host=event.host_snapshot,
+                holder_host=holder_host,
             )
         )
 
@@ -235,6 +274,8 @@ def summarise(analyses: dict[str, Analysis], counts: dict[str, int], ttl: int) -
             "contention_events": analysis.contention_events,
             "cross_vendor_collisions": len(analysis.cross_vendor_collisions),
             "cross_vendor_events": analysis.cross_vendor_events,
+            "cross_host_collisions": len(analysis.cross_host_collisions),
+            "cross_host_events": analysis.cross_host_events,
             "stale_denials": analysis.stale_denials,
             "defects": analysis.defects,
             "denials_naming_a_holder": analysis.named_holder_denials,
@@ -259,6 +300,7 @@ def render(summary: dict) -> str:
     counts = summary["counts"]
     lines.append(
         f"audit rows: {counts['audit_rows']}  |  distinct agents: {counts['distinct_agents']}"
+        f"  |  distinct claim hosts: {counts.get('distinct_hosts', 0)}"
         f"  |  trails: {counts['trails']} ({counts['trail_failures']} failure)"
     )
     lines.append(f"lease TTL used for the window test: {summary['ttl_seconds']}s")
@@ -280,6 +322,8 @@ def render(summary: dict) -> str:
         lines.append(f"  distinct contention events{block['contention_events']:>3}")
         lines.append(f"  cross-vendor collisions   {block['cross_vendor_collisions']}")
         lines.append(f"  cross-vendor events       {block['cross_vendor_events']}")
+        lines.append(f"  cross-host collisions     {block['cross_host_collisions']}")
+        lines.append(f"  cross-host events         {block['cross_host_events']}")
         lines.append(f"  stale denials (not counted){block['stale_denials']:>2}")
         lines.append(f"  defects (two live leases)  {len(block['defects'])}")
         lines.append(

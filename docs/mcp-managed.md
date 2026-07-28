@@ -103,8 +103,9 @@ Roshambo deliberately keeps two MCP paths onto the same CockroachDB cluster apar
 - The **Managed MCP Server** (this document) is the human-adjacent inspection path:
   schema introspection, ad-hoc analysis, operational questions. Read-only by default.
 - **`roshambo-mcp`** (this repository's own server, see the top-level README) is the
-  agent-adjacent path: a narrow, checked set of six verbs (`claim`, `release`,
-  `remember`, `recall`, `decide`, `status`) that enforce Roshambo's invariants. It has
+  agent-adjacent path: a narrow, checked set of eight verbs (`register_agent`, `claim`,
+  `heartbeat`, `release`, `remember`, `recall`, `decide`, `status`) that enforce
+  Roshambo's invariants. It has
   **no SQL tool at all** — an agent that could write arbitrary SQL could violate those
   invariants (release a lease it does not hold, write a trail with no evidence, skip
   the mandatory `provenance` on a decision).

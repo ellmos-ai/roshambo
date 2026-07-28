@@ -42,13 +42,15 @@ SET CLUSTER SETTING feature.vector_index.enabled = true;
 -- Who is in the swarm?
 CREATE TABLE IF NOT EXISTS agents (
     swarm_id       STRING NOT NULL,
-    agent_id       UUID   NOT NULL DEFAULT gen_random_uuid(),
+    agent_id       UUID   NOT NULL DEFAULT gen_random_uuid(), -- internal registry row id
+    agent_key      STRING NOT NULL DEFAULT gen_random_uuid()::STRING,
     framework      STRING NOT NULL,           -- claude | codex | gemini | kimi | lambda | ...
     host           STRING NOT NULL,
     capabilities   JSONB  NOT NULL DEFAULT '{}',
     registered_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_heartbeat TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (swarm_id, agent_id)
+    PRIMARY KEY (swarm_id, agent_id),
+    UNIQUE INDEX agents_by_key (swarm_id, agent_key)
 );
 
 -- Distributed leases. One row per (swarm, resource); the primary key is the mutex.
@@ -56,12 +58,16 @@ CREATE TABLE IF NOT EXISTS claims (
     swarm_id     STRING NOT NULL,
     resource     STRING NOT NULL,             -- e.g. "repo:roshambo:src/memory.py"
     claim_id     UUID   NOT NULL DEFAULT gen_random_uuid(),
-    agent_id     STRING NOT NULL,             -- free-form agent identity, not a FK
+    agent_id     STRING NOT NULL,
+    framework_snapshot STRING NOT NULL DEFAULT 'unknown',
+    host_snapshot STRING NOT NULL DEFAULT 'unknown',
     intent       STRING NOT NULL,             -- human-readable: what the holder intends to do
     acquired_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at   TIMESTAMPTZ NOT NULL,
     heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (swarm_id, resource)
+    PRIMARY KEY (swarm_id, resource),
+    CONSTRAINT claims_agent_fk FOREIGN KEY (swarm_id, agent_id)
+      REFERENCES agents (swarm_id, agent_key)
 );
 
 -- Trails: attempts and how they ended — the negative memory.
@@ -117,14 +123,74 @@ CREATE TABLE IF NOT EXISTS audit_log (
     swarm_id   STRING NOT NULL,
     event_id   UUID   NOT NULL DEFAULT gen_random_uuid(),
     agent_id   STRING,
+    framework_snapshot STRING,
+    host_snapshot STRING,
     verb       STRING NOT NULL,               -- claim | release | remember | recall | decide | ...
     resource   STRING,
     allowed    BOOL   NOT NULL,
     reason     STRING,
     latency_ms INT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (swarm_id, created_at, event_id)
+    PRIMARY KEY (swarm_id, created_at, event_id),
+    CONSTRAINT audit_agent_fk FOREIGN KEY (swarm_id, agent_id)
+      REFERENCES agents (swarm_id, agent_key)
 );
 
 -- Secondary index used by status() and by expiry sweeps.
 CREATE INDEX IF NOT EXISTS claims_by_expiry ON claims (swarm_id, expires_at);
+
+-- Upgrade path for clusters created before registry-backed agent identities existed.
+-- Additive and idempotent: historical free-form ids become explicit legacy identities,
+-- while their original claim/audit rows remain intact.
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS agent_key STRING;
+UPDATE agents
+   SET agent_key = agent_id::STRING
+ WHERE agent_key IS NULL;
+ALTER TABLE agents ALTER COLUMN agent_key SET DEFAULT gen_random_uuid()::STRING;
+ALTER TABLE agents ALTER COLUMN agent_key SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS agents_by_key ON agents (swarm_id, agent_key);
+
+ALTER TABLE claims ADD COLUMN IF NOT EXISTS framework_snapshot STRING;
+ALTER TABLE claims ADD COLUMN IF NOT EXISTS host_snapshot STRING;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS framework_snapshot STRING;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS host_snapshot STRING;
+
+INSERT INTO agents (swarm_id, agent_key, framework, host, capabilities)
+SELECT DISTINCT swarm_id, agent_id, 'legacy', 'unknown', '{"migrated": true}'::JSONB
+  FROM (
+        SELECT swarm_id, agent_id FROM claims
+        UNION
+        SELECT swarm_id, agent_id FROM audit_log WHERE agent_id IS NOT NULL
+       ) AS historical
+ WHERE agent_id IS NOT NULL
+ON CONFLICT (swarm_id, agent_key) DO NOTHING;
+
+-- Backfill once, while the newly-added columns are NULL. On every later schema run
+-- these rows are left alone, even if the current registry entry has changed.
+UPDATE claims AS c
+   SET framework_snapshot = a.framework,
+       host_snapshot = a.host
+  FROM agents AS a
+ WHERE c.swarm_id = a.swarm_id
+   AND c.agent_id = a.agent_key
+   AND c.framework_snapshot IS NULL
+   AND c.host_snapshot IS NULL;
+
+UPDATE audit_log AS l
+   SET framework_snapshot = a.framework,
+       host_snapshot = a.host
+  FROM agents AS a
+ WHERE l.swarm_id = a.swarm_id
+   AND l.agent_id = a.agent_key
+   AND l.framework_snapshot IS NULL
+   AND l.host_snapshot IS NULL;
+
+ALTER TABLE claims ALTER COLUMN framework_snapshot SET DEFAULT 'unknown';
+ALTER TABLE claims ALTER COLUMN host_snapshot SET DEFAULT 'unknown';
+ALTER TABLE claims ALTER COLUMN framework_snapshot SET NOT NULL;
+ALTER TABLE claims ALTER COLUMN host_snapshot SET NOT NULL;
+
+ALTER TABLE claims ADD CONSTRAINT claims_agent_fk
+    FOREIGN KEY (swarm_id, agent_id) REFERENCES agents (swarm_id, agent_key);
+ALTER TABLE audit_log ADD CONSTRAINT audit_agent_fk
+    FOREIGN KEY (swarm_id, agent_id) REFERENCES agents (swarm_id, agent_key);

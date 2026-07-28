@@ -16,7 +16,7 @@ Cockroach Labs' own operational skills alongside them.
 | `roshambo-claim-work` | Call `claim()` before starting shareable work; treat a `ClaimDenied` as information, not an error; `heartbeat()` long work; `release()` promptly | [`skills/roshambo-claim-work/SKILL.md`](../skills/roshambo-claim-work/SKILL.md) |
 
 Both skills describe *habits*, not API syntax — an agent that has only read
-`roshambo-mcp`'s tool schemas knows the six verbs exist; these skills are what teaches
+`roshambo-mcp`'s tool schemas know the eight verbs exist; these skills are what teach
 it to actually use `recall()` before acting and to treat a denied `claim()` as useful
 information rather than something to retry in a loop. That distinction is why they
 exist as skills and not just as tool docstrings (the docstrings in

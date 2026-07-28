@@ -25,21 +25,24 @@ from .models import Claim, ClaimDenied
 #: statement. `claim_id` is regenerated on takeover so the previous holder's id becomes
 #: worthless the moment its lease lapses — a stale heartbeat cannot resurrect it.
 ACQUIRE_SQL = """
-INSERT INTO claims (swarm_id, resource, agent_id, intent, expires_at)
-VALUES (%s, %s, %s, %s, now() + %s::INTERVAL)
+INSERT INTO claims (swarm_id, resource, agent_id, intent,
+                    framework_snapshot, host_snapshot, expires_at)
+VALUES (%s, %s, %s, %s, %s, %s, now() + %s::INTERVAL)
 ON CONFLICT (swarm_id, resource) DO UPDATE
    SET agent_id     = excluded.agent_id,
        claim_id     = gen_random_uuid(),
        intent       = excluded.intent,
+       framework_snapshot = excluded.framework_snapshot,
+       host_snapshot = excluded.host_snapshot,
        acquired_at  = now(),
        heartbeat_at = now(),
        expires_at   = excluded.expires_at
  WHERE claims.expires_at < now()
-RETURNING claim_id, agent_id, intent, expires_at
+RETURNING claim_id, agent_id, intent, expires_at, framework_snapshot, host_snapshot
 """
 
 HOLDER_SQL = """
-SELECT claim_id, agent_id, intent, expires_at
+SELECT claim_id, agent_id, intent, expires_at, framework_snapshot, host_snapshot
   FROM claims
  WHERE swarm_id = %s AND resource = %s AND expires_at > now()
 """
@@ -65,6 +68,8 @@ def acquire(
     agent_id: str,
     intent: str,
     ttl_seconds: int,
+    framework: str = "unknown",
+    host: str = "unknown",
 ) -> Claim | ClaimDenied:
     """Try to take the lease on `resource`.
 
@@ -75,29 +80,41 @@ def acquire(
             lambda: fetch_one(
                 conn,
                 ACQUIRE_SQL,
-                (swarm_id, resource, agent_id, intent, _interval(ttl_seconds)),
+                (
+                    swarm_id,
+                    resource,
+                    agent_id,
+                    intent,
+                    framework,
+                    host,
+                    _interval(ttl_seconds),
+                ),
             )
         )
         if row is not None:
-            claim_id, holder, held_intent, expires_at = row
+            claim_id, holder, held_intent, expires_at, held_framework, held_host = row
             return Claim(
                 claim_id=str(claim_id),
                 resource=resource,
                 agent_id=str(holder),
                 intent=held_intent,
                 expires_at=expires_at,
+                framework=held_framework,
+                host=held_host,
             )
 
         holder_row = retry_on_serialization_failure(
             lambda: fetch_one(conn, HOLDER_SQL, (swarm_id, resource))
         )
         if holder_row is not None:
-            _, holder, held_intent, expires_at = holder_row
+            _, holder, held_intent, expires_at, held_framework, held_host = holder_row
             return ClaimDenied(
                 resource=resource,
                 held_by=str(holder),
                 intent=held_intent,
                 expires_at=expires_at,
+                framework=held_framework,
+                host=held_host,
             )
         # The holder released (or its lease lapsed) between our two statements, so there
         # is nobody to name. Retrying is safe: the acquire is still atomic, and a loser
@@ -140,11 +157,13 @@ def who_has(conn: psycopg.Connection, swarm_id: str, resource: str) -> Claim | N
     )
     if row is None:
         return None
-    claim_id, agent_id, intent, expires_at = row
+    claim_id, agent_id, intent, expires_at, framework, host = row
     return Claim(
         claim_id=str(claim_id),
         resource=resource,
         agent_id=str(agent_id),
         intent=intent,
         expires_at=expires_at,
+        framework=framework,
+        host=host,
     )

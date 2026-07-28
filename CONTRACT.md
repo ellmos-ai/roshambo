@@ -64,6 +64,9 @@ class Roshambo:
     def __init__(self, cfg: RoshamboConfig, embedder: Embedder | None = None) -> None: ...
 
     # --- coordination ---
+    def register_agent(self, framework: str, host: str,
+                       capabilities: dict | None = None,
+                       agent_id: str | None = None) -> str: ...
     def claim(self, resource: str, agent_id: str, intent: str,
               ttl_seconds: int | None = None) -> Claim | ClaimDenied: ...
     def heartbeat(self, claim_id: str) -> bool: ...
@@ -96,9 +99,9 @@ Confidence = Literal["high", "medium", "low"]
 Provenance = Literal["agent-inferred", "human-confirmed", "human-corrected"]
 
 @dataclass(frozen=True)
-class Claim:       claim_id: str; resource: str; agent_id: str; intent: str; expires_at: datetime
+class Claim:       claim_id: str; resource: str; agent_id: str; intent: str; expires_at: datetime; framework: str; host: str
 @dataclass(frozen=True)
-class ClaimDenied: resource: str; held_by: str; intent: str; expires_at: datetime
+class ClaimDenied: resource: str; held_by: str; intent: str; expires_at: datetime; framework: str; host: str
 @dataclass(frozen=True)
 class Trail:       trail_id: str; topic: str; approach: str; outcome: Outcome; evidence: str; created_at: datetime
 @dataclass(frozen=True)
@@ -114,6 +117,14 @@ class SwarmStatus: agents: int; active_claims: int; trails: int; failures: int; 
 `claim()` returns `ClaimDenied` (not an exception) when another agent holds a valid lease —
 the denial carries **who** holds it and **what** they are doing. That is a product feature,
 not an error path.
+
+Agent identity is registry-backed. `agents.agent_id` remains the internal UUID row key;
+the caller-visible stable id is `agents.agent_key`, unique within a swarm.
+`claims.agent_id` and non-null `audit_log.agent_id` reference `(swarm_id, agent_key)`.
+Claims and audit events copy `framework` and `host` into snapshot columns when written,
+so later registry updates cannot rewrite historical evidence. An unregistered legacy
+caller is represented honestly as `framework=unregistered, host=unknown`; new field
+runs register first.
 
 ### `roshambo.aws` — owned by AWS lane
 

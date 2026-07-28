@@ -57,7 +57,7 @@ python demo/run_story.py --beat 1
 python demo/run_story.py --measure --rounds 10
 
 # Coordinate agents from three different vendors through the shell front door
-python demo/multivendor/run_field.py --workspace <dir outside this repo> --swarm <fresh id> --rounds 2 --instances 3 --ttl 120
+python demo/multivendor/run_field.py --workspace <dir outside this repo> --swarm <fresh id> --host-label <stable-public-host-label> --rounds 2 --instances 3 --ttl 120
 python demo/multivendor/collect_evidence.py --swarm <the same id> --ttl 120
 ```
 

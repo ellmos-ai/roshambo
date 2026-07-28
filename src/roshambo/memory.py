@@ -10,6 +10,7 @@ import hashlib
 import math
 import re
 import time
+import uuid
 from collections.abc import Sequence
 from typing import Any
 
@@ -170,7 +171,17 @@ class Roshambo:
         """Take an exclusive lease on `resource`, or learn who already has it."""
         ttl = ttl_seconds if ttl_seconds is not None else self.cfg.lease_ttl_seconds
         started = time.perf_counter()
-        result = acquire(self.conn, self.cfg.swarm_id, resource, agent_id, intent, ttl)
+        framework, host = self._agent_identity(agent_id)
+        result = acquire(
+            self.conn,
+            self.cfg.swarm_id,
+            resource,
+            agent_id,
+            intent,
+            ttl,
+            framework,
+            host,
+        )
         granted = isinstance(result, Claim)
         self._audit(
             verb="claim",
@@ -179,24 +190,42 @@ class Roshambo:
             allowed=granted,
             reason=None if granted else f"held by {result.held_by}",  # type: ignore[union-attr]
             started=started,
+            framework=framework,
+            host=host,
         )
         return result
 
     def heartbeat(self, claim_id: str) -> bool:
         """Keep a lease alive. False once it has lapsed — then it is not ours any more."""
-        return heartbeat(self.conn, self.cfg.swarm_id, claim_id, self.cfg.lease_ttl_seconds)
+        started = time.perf_counter()
+        identity = self._claim_identity(claim_id)
+        alive = heartbeat(self.conn, self.cfg.swarm_id, claim_id, self.cfg.lease_ttl_seconds)
+        self._audit(
+            verb="heartbeat",
+            agent_id=identity[0] if identity else None,
+            resource=None,
+            allowed=alive,
+            reason=None if alive else "unknown or expired claim_id",
+            started=started,
+            framework=identity[1] if identity else None,
+            host=identity[2] if identity else None,
+        )
+        return alive
 
     def release(self, claim_id: str) -> bool:
         """Hand a lease back before it expires."""
         started = time.perf_counter()
+        identity = self._claim_identity(claim_id)
         ok = release(self.conn, self.cfg.swarm_id, claim_id)
         self._audit(
             verb="release",
-            agent_id=None,
+            agent_id=identity[0] if identity else None,
             resource=None,
             allowed=ok,
             reason=None if ok else "unknown claim_id",
             started=started,
+            framework=identity[1] if identity else None,
+            host=identity[2] if identity else None,
         )
         return ok
 
@@ -504,24 +533,50 @@ class Roshambo:
         framework: str,
         host: str,
         capabilities: dict | None = None,
+        agent_id: str | None = None,
     ) -> str:
-        """Announce an agent to the swarm and return its generated id."""
-        row = fetch_one(
-            self.conn,
-            """
-            INSERT INTO agents (swarm_id, framework, host, capabilities)
-            VALUES (%s, %s, %s, %s)
-            RETURNING agent_id
-            """,
-            (
-                self.cfg.swarm_id,
-                framework,
-                host,
-                psycopg.types.json.Json(capabilities or {}),
-            ),
+        """Register a stable caller identity and return its collision-safe key.
+
+        Re-registering the same key updates the *current* registry row. Prior audit
+        events retain their immutable framework/host snapshots.
+        """
+        key = agent_id or str(uuid.uuid4())
+        started = time.perf_counter()
+        row = retry_on_serialization_failure(
+            lambda: fetch_one(
+                self.conn,
+                """
+                INSERT INTO agents (swarm_id, agent_key, framework, host, capabilities)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (swarm_id, agent_key) DO UPDATE
+                   SET framework = excluded.framework,
+                       host = excluded.host,
+                       capabilities = excluded.capabilities,
+                       last_heartbeat = now()
+                RETURNING agent_key
+                """,
+                (
+                    self.cfg.swarm_id,
+                    key,
+                    framework,
+                    host,
+                    psycopg.types.json.Json(capabilities or {}),
+                ),
+            )
         )
         assert row is not None
-        return str(row[0])
+        registered = str(row[0])
+        self._audit(
+            verb="register_agent",
+            agent_id=registered,
+            resource=None,
+            allowed=True,
+            reason="registered",
+            started=started,
+            framework=framework,
+            host=host,
+        )
+        return registered
 
     # -------------------------------------------------------------------- private
 
@@ -543,6 +598,50 @@ class Roshambo:
             )
         return vector
 
+    def _agent_identity(self, agent_id: str) -> tuple[str, str]:
+        """Resolve a registry key, creating an honest legacy row when needed."""
+        row = fetch_one(
+            self.conn,
+            """
+            SELECT framework, host
+              FROM agents
+             WHERE swarm_id = %s AND agent_key = %s
+            """,
+            (self.cfg.swarm_id, agent_id),
+        )
+        if row is not None:
+            return str(row[0]), str(row[1])
+
+        row = retry_on_serialization_failure(
+            lambda: fetch_one(
+                self.conn,
+                """
+                INSERT INTO agents (swarm_id, agent_key, framework, host, capabilities)
+                VALUES (%s, %s, 'unregistered', 'unknown', '{"auto_registered": true}'::JSONB)
+                ON CONFLICT (swarm_id, agent_key) DO UPDATE
+                   SET last_heartbeat = now()
+                RETURNING framework, host
+                """,
+                (self.cfg.swarm_id, agent_id),
+            )
+        )
+        assert row is not None
+        return str(row[0]), str(row[1])
+
+    def _claim_identity(self, claim_id: str) -> tuple[str, str, str] | None:
+        row = fetch_one(
+            self.conn,
+            """
+            SELECT agent_id, framework_snapshot, host_snapshot
+              FROM claims
+             WHERE swarm_id = %s AND claim_id = %s
+            """,
+            (self.cfg.swarm_id, claim_id),
+        )
+        if row is None:
+            return None
+        return str(row[0]), str(row[1]), str(row[2])
+
     def _audit(
         self,
         *,
@@ -552,18 +651,33 @@ class Roshambo:
         allowed: bool,
         reason: str | None,
         started: float,
+        framework: str | None = None,
+        host: str | None = None,
     ) -> None:
         """Append to the black box. Best effort: never fails the operation it records."""
         latency_ms = int((time.perf_counter() - started) * 1000)
         try:
+            if agent_id is not None and (framework is None or host is None):
+                framework, host = self._agent_identity(agent_id)
             execute(
                 self.conn,
                 """
-                INSERT INTO audit_log (swarm_id, agent_id, verb, resource,
+                INSERT INTO audit_log (swarm_id, agent_id, framework_snapshot,
+                                       host_snapshot, verb, resource,
                                        allowed, reason, latency_ms)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                (self.cfg.swarm_id, agent_id, verb, resource, allowed, reason, latency_ms),
+                (
+                    self.cfg.swarm_id,
+                    agent_id,
+                    framework,
+                    host,
+                    verb,
+                    resource,
+                    allowed,
+                    reason,
+                    latency_ms,
+                ),
             )
         except psycopg.Error:
             pass

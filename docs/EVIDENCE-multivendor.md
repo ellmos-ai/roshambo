@@ -1,5 +1,9 @@
 # Evidence: coordination between agents from three different vendors
 
+> 2026-07-28 note: the historical runs below remain unchanged and were single-host.
+> Registry-backed stable ids and immutable framework/host snapshots are now implemented
+> for a future run, but no two-machine result has been produced yet.
+
 What this document is for: the demo application's collision scene proves that the
 mechanism works, but its three racers are three threads in one process. Roshambo's
 positioning claims something stronger — coordination between agents that do not know

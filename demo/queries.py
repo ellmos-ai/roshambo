@@ -19,14 +19,10 @@ audited path as everything else and let this module be deleted.
 point is showing at least two *different* agent runtimes contending for the
 same resource, not three copies of the same Lambda, so a claim without a
 visible origin system would undersell exactly the thing being demonstrated.
-The join works because ``demo/local_agent_worker.py`` and
-``demo/run_collision_demo.py`` both call ``Roshambo.register_agent(...)`` and
-then reuse its returned UUID as the ``agent_id`` passed to ``claim()`` --
-``claims.agent_id`` is a free-form ``STRING`` (not a foreign key, see the
-schema's own comment), so this only works for claims made that way. Claims
-made with an arbitrary human-picked ``agent_id`` (older test fixtures, manual
-``roshambo claim`` CLI calls) simply show no origin system -- the ``LEFT JOIN``
-degrades to ``None``/``None`` instead of dropping the row.
+Claims now reference ``agents.agent_key`` and carry the framework/host snapshot
+captured when the lease was granted. Reading that snapshot instead of the current
+registry row is important: re-registering an identity on another machine must not
+rewrite what an earlier claim proved.
 """
 
 from __future__ import annotations
@@ -37,18 +33,15 @@ from roshambo.db import connect, fetch_all
 
 def active_claims(cfg: RoshamboConfig) -> list[dict]:
     """Every non-expired claim in ``cfg.swarm_id``, most recently acquired first,
-    each annotated with the holder's ``framework``/``host`` when the holder was
-    registered via ``Roshambo.register_agent(...)`` (``None``/``None`` otherwise).
+    each annotated with the immutable framework/host snapshot captured at grant time.
     """
     with connect(cfg) as conn:
         rows = fetch_all(
             conn,
             """
             SELECT c.resource, c.agent_id, c.intent, c.acquired_at, c.expires_at,
-                   a.framework, a.host
+                   c.framework_snapshot, c.host_snapshot
               FROM claims c
-              LEFT JOIN agents a
-                ON a.swarm_id = c.swarm_id AND a.agent_id::STRING = c.agent_id
              WHERE c.swarm_id = %s AND c.expires_at > now()
              ORDER BY c.acquired_at DESC
             """,
@@ -98,9 +91,9 @@ def recent_denials(cfg: RoshamboConfig, limit: int = 10) -> list[dict]:
                    a.framework, a.host, h.framework
               FROM trails t
               LEFT JOIN agents a
-                ON a.swarm_id = t.swarm_id AND a.agent_id::STRING = t.agent_id
+                ON a.swarm_id = t.swarm_id AND a.agent_key = t.agent_id
               LEFT JOIN agents h
-                ON h.swarm_id = t.swarm_id AND h.agent_id::STRING = t.detail->>'held_by'
+                ON h.swarm_id = t.swarm_id AND h.agent_key = t.detail->>'held_by'
              WHERE t.swarm_id = %s AND t.outcome = 'abandoned'
              ORDER BY t.created_at DESC
              LIMIT %s

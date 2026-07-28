@@ -6,7 +6,8 @@ Roshambo has two deliberately separate MCP paths onto the same CockroachDB clust
   human-adjacent path: schema introspection, ad-hoc analysis, operational questions.
   Read-only by default. See ``docs/mcp-managed.md``.
 - **This server** (``roshambo-mcp``) is the agent-adjacent path: a narrow, checked set of
-  verbs -- ``claim``, ``release``, ``remember``, ``recall``, ``decide``, ``status`` --
+  verbs -- ``register_agent``, ``claim``, ``heartbeat``, ``release``, ``remember``,
+  ``recall``, ``decide``, ``status`` --
   that enforce Roshambo's invariants (lease semantics, provenance on every decision). It
   does **not** expose a tool that accepts free-form SQL. That is a deliberate security
   boundary, not an oversight: an agent that can write arbitrary SQL can violate the
@@ -20,9 +21,9 @@ or via the ``roshambo-mcp`` console script installed by this package; both defau
 stdio transport, which is what Claude Code, Cursor and other local MCP clients expect
 from a locally-launched server.
 
-The six tools below are thin wrappers around ``roshambo.memory.Roshambo`` (owned by the Core
+The tools below are thin wrappers around ``roshambo.memory.Roshambo`` (owned by the Core
 lane, see ``CONTRACT.md``). That module may not exist yet at import time -- the import
-is deferred and defensive so this server still starts and lists its six tools even
+is deferred and defensive so this server still starts and lists its eight tools even
 before ``roshambo.memory`` lands; only *calling* a tool then fails, with a clear message
 naming the missing module.
 """
@@ -62,7 +63,7 @@ mcp = FastMCP(
 )
 
 # Lazily constructed on first tool call, not at import time, so this module -- and the
-# six tools it registers -- can be imported and listed even before roshambo.memory exists
+# tools it registers -- can be imported and listed even before roshambo.memory exists
 # or a ROSHAMBO_DSN is configured.
 _roshambo: Any = None
 _import_error: Exception | None = None
@@ -126,6 +127,34 @@ def _serialize(value: Any) -> Any:
 
 
 @mcp.tool()
+def register_agent(
+    agent_id: str,
+    framework: str,
+    host: str,
+    capabilities: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Register a stable agent identity before claiming work.
+
+    `agent_id` must be collision-safe across machines (for example
+    `codex-1@workstation-a`). Re-registering the same id updates the current registry
+    row, while audit events retain the framework/host snapshot captured when they were
+    written.
+    """
+    registered = _get_roshambo().register_agent(
+        agent_id=agent_id,
+        framework=framework,
+        host=host,
+        capabilities=capabilities,
+    )
+    return {
+        "registered": True,
+        "agent_id": registered,
+        "framework": framework,
+        "host": host,
+    }
+
+
+@mcp.tool()
 def claim(
     resource: str,
     agent_id: str,
@@ -146,6 +175,18 @@ def claim(
             resource=resource, agent_id=agent_id, intent=intent, ttl_seconds=ttl_seconds
         )
     )
+
+
+@mcp.tool()
+def heartbeat(claim_id: str) -> dict[str, Any]:
+    """Extend a live lease after a concrete work step.
+
+    A false result means the lease has expired or changed hands and is deliberately
+    not renewable. Stop work rather than retrying blindly. Heartbeats should represent
+    progress, not a background timer that keeps a stuck agent alive.
+    """
+    alive = _get_roshambo().heartbeat(claim_id=claim_id)
+    return {"claim_id": claim_id, "alive": alive}
 
 
 @mcp.tool()

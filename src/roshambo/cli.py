@@ -1,6 +1,6 @@
 """Command line interface.
 
-Deliberately narrow: the same five verbs the agent-facing API exposes, plus schema
+Deliberately narrow: the checked verbs the agent-facing API exposes, plus schema
 setup and a status read. There is no "run arbitrary SQL" subcommand — if you want that,
 use the CockroachDB Managed MCP server or `cockroach sql`, which is the read path.
 """
@@ -45,6 +45,19 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("status", help="counters for the configured swarm")
 
+    p_register = sub.add_parser(
+        "register-agent",
+        help="register a stable agent identity with framework and host",
+    )
+    p_register.add_argument("--agent-id", required=True)
+    p_register.add_argument("--framework", required=True)
+    p_register.add_argument("--host", required=True)
+    p_register.add_argument(
+        "--capabilities-json",
+        default="{}",
+        help="JSON object describing capabilities (default: {})",
+    )
+
     p_claim = sub.add_parser("claim", help="take an exclusive lease on a resource")
     p_claim.add_argument("resource")
     p_claim.add_argument("--agent-id", required=True)
@@ -86,6 +99,18 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=["success", "failure", "abandoned", "inconclusive"],
         help="restrict to these outcomes (repeatable)",
     )
+
+    p_decide = sub.add_parser("decide", help="record a decision with provenance")
+    p_decide.add_argument("question")
+    p_decide.add_argument("--choice", required=True)
+    p_decide.add_argument("--rationale", required=True)
+    p_decide.add_argument("--confidence", required=True, choices=["high", "medium", "low"])
+    p_decide.add_argument(
+        "--provenance",
+        required=True,
+        choices=["agent-inferred", "human-confirmed", "human-corrected"],
+    )
+    p_decide.add_argument("--agent-id", default=None)
     return parser
 
 
@@ -117,6 +142,28 @@ def main(argv: Sequence[str] | None = None) -> int:
                     f"swarm={cfg.swarm_id} agents={st.agents} "
                     f"active_claims={st.active_claims} trails={st.trails} "
                     f"failures={st.failures} facts={st.facts}",
+                )
+                return 0
+
+            if args.command == "register-agent":
+                capabilities = json.loads(args.capabilities_json)
+                if not isinstance(capabilities, dict):
+                    raise ValueError("--capabilities-json must contain a JSON object")
+                agent_id = roshambo.register_agent(
+                    agent_id=args.agent_id,
+                    framework=args.framework,
+                    host=args.host,
+                    capabilities=capabilities,
+                )
+                _emit(
+                    {
+                        "registered": True,
+                        "agent_id": agent_id,
+                        "framework": args.framework,
+                        "host": args.host,
+                    },
+                    args.json,
+                    f"registered {agent_id} ({args.framework} on {args.host})",
                 )
                 return 0
 
@@ -207,6 +254,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                     )
                     print(f"   approach: {hit.trail.approach}")
                     print(f"   evidence: {hit.trail.evidence}")
+                return 0
+
+            if args.command == "decide":
+                decision = roshambo.decide(
+                    question=args.question,
+                    choice=args.choice,
+                    rationale=args.rationale,
+                    confidence=args.confidence,
+                    provenance=args.provenance,
+                    agent_id=args.agent_id,
+                )
+                _emit(
+                    {**decision.__dict__},
+                    args.json,
+                    f"decided {decision.decision_id}: {decision.choice}",
+                )
                 return 0
 
         return 2

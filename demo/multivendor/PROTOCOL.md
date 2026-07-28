@@ -53,9 +53,9 @@ The wrapper also keeps the DSN out of the agents' context. Third-party agent run
 transmit their context to their vendor, so the connection string is resolved inside the
 wrapper process from a file path, never passed to the agent.
 
-**Known gap:** `decide` exists as an MCP tool but not as a CLI subcommand, so it is not
-exercised in this run. It is not part of the collision proof. Adding it would be a
-scope change and was not made.
+**Historical run boundary:** `decide` was not CLI-reachable in the recorded runs and
+was therefore not exercised. It is not part of their collision proof. The CLI verb was
+added on 2026-07-28 for future runs; that does not retroactively change old evidence.
 
 ## 4. The shared work
 
@@ -127,6 +127,21 @@ count could therefore never differ from the collision count. It measured nothing
 Corrected: the share is counted over **all denials**, not only those that became
 collisions. That is the property with actual meaning — how often a refused agent was told
 who was working, which is what lets it do something else instead of waiting.
+
+### Addendum, 2026-07-28 — cross-host evidence for the next run
+
+The historical runs were single-host. For a future two-machine run, merely seeing two
+host labels anywhere in `audit_log` is not proof that the machines contended with each
+other. The following definitions are registered before that run:
+
+- **Cross-host collision** — a genuine collision whose grant and denial carry known,
+  different immutable `host_snapshot` values.
+- **Cross-host contention event** — one `(grant, denying agent)` pair among cross-host
+  collisions, with retries collapsed exactly like the existing contention-event rule.
+
+`distinct claim hosts` is reported only as context. The cross-host event count is the
+acceptance figure because it ties both machines to the same contested resource and lease
+window. Driver manifests and agent narration do not substitute for these database rows.
 
 This affects only that one reported figure. No collision, contention-event or
 cross-vendor rule is touched, and the correction was made before the results were read.

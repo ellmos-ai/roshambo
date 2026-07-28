@@ -29,6 +29,23 @@ if str(REPO_ROOT) not in sys.path:
 from demo.multivendor.rsb import status_line, take_resource_hint  # noqa: E402
 
 
+def test_register_status_names_identity_and_host():
+    line = status_line(
+        "register-agent",
+        0,
+        {
+            "registered": True,
+            "agent_id": "codex-2@host-a",
+            "framework": "codex",
+            "host": "host-a",
+        },
+    )
+    assert line == (
+        "ROSHAMBO RESULT=REGISTERED agent_id=codex-2@host-a "
+        "framework=codex host=host-a"
+    )
+
+
 class TestResourceHint:
     """`--resource` belongs to the wrapper and must never reach `roshambo.cli`."""
 

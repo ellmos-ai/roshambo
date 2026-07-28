@@ -18,16 +18,24 @@ from mcp.server.fastmcp.exceptions import ToolError
 
 from roshambo.mcp.server import mcp
 
-EXPECTED_TOOLS = {"claim", "release", "remember", "recall", "decide", "status"}
+EXPECTED_TOOLS = {
+    "register_agent",
+    "claim",
+    "heartbeat",
+    "release",
+    "remember",
+    "recall",
+    "decide",
+    "status",
+}
 
 
 def _list_tools():
     return asyncio.run(mcp.list_tools())
 
 
-def test_lists_exactly_the_six_contracted_tools():
-    """The hard requirement: roshambo-mcp exposes claim/release/remember/recall/decide/status
-    and nothing else."""
+def test_lists_exactly_the_eight_contracted_tools():
+    """The MCP surface exposes the identity, lease, memory and status verbs."""
     names = {tool.name for tool in _list_tools()}
     assert names == EXPECTED_TOOLS
 
@@ -42,7 +50,9 @@ def test_every_tool_has_a_substantial_description():
 @pytest.mark.parametrize(
     ("tool_name", "required"),
     [
+        ("register_agent", {"agent_id", "framework", "host"}),
         ("claim", {"resource", "agent_id", "intent"}),
+        ("heartbeat", {"claim_id"}),
         ("release", {"claim_id"}),
         ("remember", {"topic", "approach", "outcome", "evidence"}),
         ("recall", {"query"}),
@@ -88,9 +98,9 @@ def test_calling_a_tool_without_roshambo_dsn_fails_clearly(monkeypatch):
 def test_full_round_trip_through_call_tool(monkeypatch, live_dsn, schema_ready, swarm_id):
     """End-to-end proof against a real CockroachDB cluster, through mcp.call_tool() --
     the same entry point a real MCP client (e.g. Claude Code) uses -- not by calling
-    roshambo.memory.Roshambo directly. Exercises all six tools in one coherent story: claim a
-    resource, hit a dead end, recall it from a differently-worded query, decide how to
-    proceed, check status, release the lease.
+    roshambo.memory.Roshambo directly. Exercises all eight tools in one coherent story:
+    register two identities, claim and heartbeat a resource, hit a dead end, recall it,
+    decide how to proceed, check status, and release the lease.
     """
     monkeypatch.setenv("ROSHAMBO_DSN", live_dsn)
     monkeypatch.setenv("ROSHAMBO_SWARM_ID", swarm_id)
@@ -114,22 +124,43 @@ def test_full_round_trip_through_call_tool(monkeypatch, live_dsn, schema_ready, 
     def _call(name: str, arguments: dict):
         return _call_blocks(name, arguments)[0]
 
+    for agent_id, framework, host in (
+        ("agent-a@host-a", "codex", "host-a"),
+        ("agent-b@host-b", "agy", "host-b"),
+    ):
+        registered = _call(
+            "register_agent",
+            {"agent_id": agent_id, "framework": framework, "host": host},
+        )
+        assert registered["registered"] is True
+
     claimed = _call(
         "claim",
-        {"resource": "repo:roshambo:demo-task", "agent_id": "agent-a", "intent": "try approach X"},
+        {
+            "resource": "repo:roshambo:demo-task",
+            "agent_id": "agent-a@host-a",
+            "intent": "try approach X",
+        },
     )
     assert claimed["_type"] == "Claim"
+    assert claimed["framework"] == "codex"
+    assert claimed["host"] == "host-a"
+
+    beat = _call("heartbeat", {"claim_id": claimed["claim_id"]})
+    assert beat["alive"] is True
 
     denied = _call(
         "claim",
         {
             "resource": "repo:roshambo:demo-task",
-            "agent_id": "agent-b",
+            "agent_id": "agent-b@host-b",
             "intent": "also try approach X",
         },
     )
     assert denied["_type"] == "ClaimDenied"
-    assert denied["held_by"] == "agent-a"
+    assert denied["held_by"] == "agent-a@host-a"
+    assert denied["framework"] == "codex"
+    assert denied["host"] == "host-a"
 
     trail = _call(
         "remember",
@@ -138,7 +169,7 @@ def test_full_round_trip_through_call_tool(monkeypatch, live_dsn, schema_ready, 
             "approach": "approach X: brute force",
             "outcome": "failure",
             "evidence": "timed out after 30s, dataset too large for this approach",
-            "agent_id": "agent-a",
+            "agent_id": "agent-a@host-a",
         },
     )
     assert trail["_type"] == "Trail"
@@ -156,7 +187,7 @@ def test_full_round_trip_through_call_tool(monkeypatch, live_dsn, schema_ready, 
             "rationale": "approach X timed out on this dataset size per the recalled trail",
             "confidence": "medium",
             "provenance": "agent-inferred",
-            "agent_id": "agent-a",
+            "agent_id": "agent-a@host-a",
         },
     )
     assert decision["_type"] == "Decision"

@@ -92,6 +92,7 @@ def test_statement_splitter_on_the_real_schema():
 
     statements = split_statements(find_schema_file().read_text(encoding="utf-8"))
     kinds = [s.split()[0].upper() for s in statements]
-    assert kinds.count("CREATE") == 7  # 6 tables + 1 secondary index
+    assert kinds.count("CREATE") == 8  # 6 tables + 2 secondary indexes
+    assert kinds.count("ALTER") >= 4  # additive upgrades for existing installations
     assert "SET" in kinds
     assert all(not s.startswith("--") for s in statements)
