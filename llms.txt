@@ -2,8 +2,8 @@
 
 > Roshambo is a multi-agent coordinator built on CockroachDB and AWS Bedrock: serializable leases so two agents never claim the same work, and a distributed vector index so an agent can recall earlier attempts and outcomes before starting.
 
-Last-checked: 2026-07-27
-Verification: 94 passed, 45 skipped (139 total pytest tests verified)
+Last-checked: 2026-07-30
+Verification: 110 passed, 51 skipped (161 total pytest tests verified)
 
 ## Overview
 

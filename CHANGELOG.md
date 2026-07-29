@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project has not yet cut a
 tagged release, so everything below is under `[Unreleased]`.
 
+## [Unreleased]
+
+### Changed
+
+- Updated `llms.txt` `Last-checked` timestamp to `2026-07-30` and updated test status verification metrics (110 passed, 51 skipped).
+- Synchronized test status badges in `README.md` and `README_de.md` to reflect current pytest test suite metrics (110 passed, 51 skipped).
+
 ## [0.1.6] - 2026-07-28
 
 ### Added

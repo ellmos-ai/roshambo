@@ -1,6 +1,6 @@
 # Roshambo
 
-[![Tests](https://img.shields.io/badge/Tests-73%20passed%20%7C%2045%20skipped-success.svg)](https://github.com/ellmos-ai/roshambo)
+[![Tests](https://img.shields.io/badge/Tests-110%20passed%20%7C%2051%20skipped-success.svg)](https://github.com/ellmos-ai/roshambo)
 [![Ecosystem](https://img.shields.io/badge/ellmos--ai-framework-blue.svg)](https://github.com/ellmos-ai)
 [![Umbrella](https://img.shields.io/badge/open--bricks-umbrella-teal.svg)](https://github.com/open-bricks)
 [![LLM-Ready](https://img.shields.io/badge/LLM-Ready-brightgreen.svg)](llms.txt)
