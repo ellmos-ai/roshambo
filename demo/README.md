@@ -180,29 +180,55 @@ need to stay true:
   the question does not arise there, but this is also what makes the reverse-proxy
   fallback host work.
 
-### Not verified, and what it would take
+### Deployed
 
-Nothing has run in AWS: no account is attached to this project yet. What *is* verified is
-that the handler answers Function-URL-shaped events correctly — including a base64 binary
-asset and a query string, the two things adapters silently get wrong — in
-`tests/test_demo_lambda_entry.py`. Open, in rough order of how likely each is to bite:
+Live since 2026-07-30, as a Lambda Function URL in `eu-central-1`:
 
-* **The deployment package.** It needs `mangum`, `fastapi`/`starlette`, `psycopg[binary]`
-  and `src/roshambo`; it does **not** need `uvicorn`. `infra/deploy_lambda.py` packages
-  the *worker* function and explains the manylinux-wheel convention that a demo package
-  would follow — no such package is built here, because a zip that cannot be invoked
-  proves nothing about whether the app runs in Lambda.
-* **The database connection from Lambda.** TLS to the cluster over a Lambda ENI, and the
-  psycopg wheel against the actual runtime, are only settled by a real invocation.
-* **Cold start into mock mode.** `demo/app.py` connects once at import (so a warm
-  container reuses the connection). If that first attempt fails, the container serves
-  labelled mock data until a query errors and triggers a refresh. On a host with many
-  short-lived containers that is worth an edge health check rather than in-process retry
-  logic — the mock banner makes it visible either way, but the health endpoint is the
-  thing to alarm on.
+```
+https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/
+```
+
+`curl .../api/health` on the deployed function returns `{"mode":"live","detail":"connected"}`
+against the real CockroachDB Cloud cluster — the handler, the packaged `psycopg[binary]`
+wheel, and the TLS connection from inside Lambda are all exercised for real, not just
+by `tests/test_demo_lambda_entry.py`'s Function-URL-shaped events (which still cover the
+adapter itself: binary assets, query strings, 400s surviving as 400s).
+
+Built and deployed with `infra/deploy_demo_lambda.py` (`package` / `create-role` /
+`deploy` / `enable-url` / `teardown`) — a sibling to `infra/deploy_lambda.py`, which
+packages the *worker* function instead; see that script's module docstring for the full
+rationale (package layout, the TLS root-certificate bundling decision, the execution
+role, the October-2025 dual-permission requirement for public Function URLs, the cost
+guard). Package: `mangum`, `fastapi`/`starlette`/`pydantic`, `psycopg[binary]`,
+`src/roshambo`, `demo/` (app + adapter + static frontend only, not the standalone demo
+scripts), `assets/`, and the CockroachDB TLS root certificate — 8.7 MiB zipped, no
+`uvicorn`, no `boto3` (the deployed function runs with `ROSHAMBO_EMBEDDING_PROVIDER=placeholder`,
+which never imports `roshambo.embeddings`/Bedrock — see that module's docstring).
+
+Execution role (`roshambo-demo-lambda-role`) carries only `AWSLambdaBasicExecutionRole`
+(CloudWatch Logs for its own log group) — no Bedrock, no S3, unlike the worker's role.
+
+Measured cold start (CloudWatch `REPORT` line, first invocation after deploy):
+`Init Duration: 2177.33 ms` + `Duration: 131.94 ms` ≈ 2.3 s billed. Warm requests: 2-13 ms.
+The mangum 0.21.0 `asyncio.get_event_loop()` deprecation warning mentioned below did not
+surface as an error in this run's logs.
+
+One cost guard did **not** get applied: reserved concurrency (planned: 5) could not be
+set because this AWS account's own `ConcurrentExecutions` limit is 10 total, and AWS
+enforces a mandatory 10-execution unreserved floor across the account — reserving any
+amount here is arithmetically impossible without first requesting a quota increase.
+The account-wide limit of 10 is itself a stricter cap than 5 reserved-plus-shared-pool
+would have been, so this is noted rather than blocking; `deploy_demo_lambda.py deploy`
+treats the failure as a non-fatal warning for the same reason.
+
+#### What is still open
+
+* **Load/soak behaviour** under many concurrent requests — only smoke-tested serially.
+* **Cost over time** — the AWS Budget alarm (`roshambo-hackathon-cap`, 100 USD/month) is
+  the backstop; no multi-day cost curve has been observed yet.
 * **A deprecation in mangum itself.** mangum 0.21.0 calls `asyncio.get_event_loop()`,
-  which warns on Python 3.12 (visible in the test run). Not our code, but it is the kind
-  of thing that turns into an error on a future runtime.
+  which warns on Python 3.12 (visible in the local test run's output). Not our code, but
+  it is the kind of thing that turns into an error on a future runtime.
 
 ## Play the demo script
 
