@@ -87,7 +87,9 @@ class BedrockEmbedder:
 
         self.dim = cfg.embedding_dim
         self._model_id = cfg.bedrock_model_id
-        self._client = boto3.client("bedrock-runtime", region_name=cfg.aws_region)
+        # Deliberately cfg.bedrock_region, not cfg.aws_region -- see config.py's
+        # DEFAULT_BEDROCK_REGION docstring for why Bedrock has its own region.
+        self._client = boto3.client("bedrock-runtime", region_name=cfg.bedrock_region)
 
     def embed(self, text: str) -> list[float]:
         body = json.dumps(

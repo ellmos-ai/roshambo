@@ -18,6 +18,17 @@ DEFAULT_EMBEDDING_DIM = 1024
 DEFAULT_LEASE_TTL_SECONDS = 300
 DEFAULT_EMBEDDING_PROVIDER = "bedrock"
 DEFAULT_AWS_REGION = "eu-central-1"
+#: Separate from `DEFAULT_AWS_REGION` on purpose: the CockroachDB cluster, the Lambda
+#: functions, and S3 all live in `eu-central-1` for latency (the lease/claim path is
+#: what the demo's timing numbers measure), but Bedrock model access is granted per
+#: region and this account's `eu-central-1` Titan quota is 0 while `us-east-2` (Ohio)
+#: has it — verified live via `aws bedrock list-foundation-models`/`invoke-model`,
+#: 2026-07-30. Bedrock calls (`roshambo.embeddings.BedrockEmbedder`,
+#: `roshambo.aws.worker`'s Claude call) are the only things that read this field; the
+#: ~100 ms cross-region overhead lands on embedding/Converse calls, not on lease
+#: transactions. Override independently with `ROSHAMBO_BEDROCK_REGION` if a future
+#: account's quota situation differs.
+DEFAULT_BEDROCK_REGION = "us-east-2"
 DEFAULT_BEDROCK_MODEL_ID = "amazon.titan-embed-text-v2:0"
 DEFAULT_SWARM_ID = "default"
 
@@ -37,6 +48,7 @@ class RoshamboConfig:
     lease_ttl_seconds: int = DEFAULT_LEASE_TTL_SECONDS
     embedding_provider: str = DEFAULT_EMBEDDING_PROVIDER
     aws_region: str = DEFAULT_AWS_REGION
+    bedrock_region: str = DEFAULT_BEDROCK_REGION
     bedrock_model_id: str = DEFAULT_BEDROCK_MODEL_ID
     s3_bucket: str | None = None
 
@@ -93,6 +105,7 @@ def load_config(env: Mapping[str, str] | None = None) -> RoshamboConfig:
         lease_ttl_seconds=_get_int(env, "LEASE_TTL_SECONDS", DEFAULT_LEASE_TTL_SECONDS),
         embedding_provider=_get(env, "EMBEDDING_PROVIDER") or DEFAULT_EMBEDDING_PROVIDER,
         aws_region=_get(env, "AWS_REGION") or DEFAULT_AWS_REGION,
+        bedrock_region=_get(env, "BEDROCK_REGION") or DEFAULT_BEDROCK_REGION,
         bedrock_model_id=_get(env, "BEDROCK_MODEL_ID") or DEFAULT_BEDROCK_MODEL_ID,
         s3_bucket=_get(env, "S3_BUCKET"),
     )

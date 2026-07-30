@@ -30,7 +30,8 @@ class RoshamboConfig:
     embedding_dim: int = 1024
     lease_ttl_seconds: int = 300
     embedding_provider: str = "bedrock"   # "bedrock" | "local"
-    aws_region: str = "eu-central-1"
+    aws_region: str = "eu-central-1"      # CockroachDB/Lambda/S3 region (latency-critical)
+    bedrock_region: str = "us-east-2"     # separate: Bedrock quota, not latency-critical
     bedrock_model_id: str = "amazon.titan-embed-text-v2:0"
     s3_bucket: str | None = None
 

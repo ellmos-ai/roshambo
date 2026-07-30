@@ -197,6 +197,12 @@ def cmd_create_role(args: argparse.Namespace) -> None:
 
     account_id = sts.get_caller_identity()["Account"]
     region = _env("AWS_REGION", "eu-central-1")
+    # Deliberately separate from `region`: Bedrock model access is granted per region
+    # and this account's eu-central-1 Titan quota is 0, while us-east-2 has it --
+    # see roshambo.config.DEFAULT_BEDROCK_REGION's docstring. The IAM policy's Bedrock
+    # ARNs must name the region the calls actually go to, or InvokeModel fails with
+    # AccessDenied even though the role looks correctly scoped.
+    bedrock_region = _env("BEDROCK_REGION", "us-east-2")
     worker_model_id = _env("WORKER_BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0")
     embed_model_id = _env("BEDROCK_MODEL_ID", "amazon.titan-embed-text-v2:0")
     s3_bucket = _env("S3_BUCKET", None)
@@ -211,6 +217,7 @@ def cmd_create_role(args: argparse.Namespace) -> None:
     execution_policy_text = (INFRA_DIR / "iam_execution_policy.json").read_text(encoding="utf-8")
     execution_policy_text = (
         execution_policy_text.replace("{{AWS_REGION}}", region)
+        .replace("{{BEDROCK_REGION}}", bedrock_region)
         .replace("{{AWS_ACCOUNT_ID}}", account_id)
         .replace("{{WORKER_BEDROCK_MODEL_ID}}", worker_model_id)
         .replace("{{S3_BUCKET_NAME}}", s3_bucket)
@@ -228,7 +235,7 @@ def cmd_create_role(args: argparse.Namespace) -> None:
     for statement in execution_policy["Statement"]:
         if statement.get("Sid") == "InvokeBedrockModels":
             resources = statement["Resource"]
-            embed_arn = f"arn:aws:bedrock:{region}::foundation-model/{embed_model_id}"
+            embed_arn = f"arn:aws:bedrock:{bedrock_region}::foundation-model/{embed_model_id}"
             statement["Resource"] = [embed_arn if "titan-embed" in r else r for r in resources]
 
     role_name = args.role_name
@@ -360,6 +367,7 @@ def _worker_environment() -> dict[str, str]:
         "ROSHAMBO_LEASE_TTL_SECONDS",
         "ROSHAMBO_EMBEDDING_PROVIDER",
         "ROSHAMBO_AWS_REGION",
+        "ROSHAMBO_BEDROCK_REGION",
         "ROSHAMBO_BEDROCK_MODEL_ID",
         "ROSHAMBO_S3_BUCKET",
         "ROSHAMBO_WORKER_BEDROCK_MODEL_ID",

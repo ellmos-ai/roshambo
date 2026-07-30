@@ -222,7 +222,9 @@ def _invoke_claude(cfg, prompt: str) -> str:
         ) from exc
 
     model_id = os.environ.get("ROSHAMBO_WORKER_BEDROCK_MODEL_ID", DEFAULT_WORKER_MODEL_ID)
-    client = boto3.client("bedrock-runtime", region_name=cfg.aws_region)
+    # Deliberately cfg.bedrock_region, not cfg.aws_region -- see config.py's
+    # DEFAULT_BEDROCK_REGION docstring for why Bedrock has its own region.
+    client = boto3.client("bedrock-runtime", region_name=cfg.bedrock_region)
     response = client.converse(
         modelId=model_id,
         messages=[{"role": "user", "content": [{"text": prompt}]}],

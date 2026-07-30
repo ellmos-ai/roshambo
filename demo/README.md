@@ -159,6 +159,24 @@ One consequence to know about: `roshambo.embeddings.get_embedder()` accepts only
 with it `run_collision_demo.py --lambda-mode local-simulate` — cannot run in the same
 environment. Run that demo with `ROSHAMBO_EMBEDDING_PROVIDER=local` in a separate shell.
 
+If you do switch to `bedrock`, note that Bedrock calls go to a **different AWS region**
+than everything else — see "Two AWS regions, on purpose" below.
+
+## Two AWS regions, on purpose
+
+The CockroachDB cluster, the Lambda functions, and S3 all run in `eu-central-1`
+(`ROSHAMBO_AWS_REGION`) — that is the latency-sensitive path the demo's lease/claim
+timing numbers measure, so it stays regional. Bedrock calls (`roshambo.embeddings.BedrockEmbedder`,
+`roshambo.aws.worker`'s Claude call) use a **separate** `ROSHAMBO_BEDROCK_REGION`,
+defaulting to `us-east-2` (Ohio): Bedrock model access is granted per region, and this
+project's AWS account has a `eu-central-1` Titan Text Embeddings V2 quota of **0** — new
+accounts do not get Bedrock model access in every region automatically — while `us-east-2`
+had a usable quota (6000), confirmed live with `aws bedrock invoke-model` before relying
+on it, not assumed. The ~100 ms this adds lands only on embedding/Converse calls, never on
+a lease transaction. See `roshambo.config`'s `DEFAULT_BEDROCK_REGION` docstring for the
+same reasoning in code, and `tests/test_core_recall.py::test_recall_with_the_real_embedder`
+for the one test that actually exercises this path end to end.
+
 ## Run it as a Lambda (the intended host)
 
 The demo is meant to end up behind an **AWS Lambda Function URL** (decided 2026-07-26).

@@ -19,8 +19,8 @@
         "bedrock:InvokeModelWithResponseStream"
       ],
       "Resource": [
-        "arn:aws:bedrock:{{AWS_REGION}}::foundation-model/amazon.titan-embed-text-v2:0",
-        "arn:aws:bedrock:{{AWS_REGION}}::foundation-model/{{WORKER_BEDROCK_MODEL_ID}}"
+        "arn:aws:bedrock:{{BEDROCK_REGION}}::foundation-model/amazon.titan-embed-text-v2:0",
+        "arn:aws:bedrock:{{BEDROCK_REGION}}::foundation-model/{{WORKER_BEDROCK_MODEL_ID}}"
       ]
     },
     {

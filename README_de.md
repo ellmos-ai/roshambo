@@ -429,7 +429,8 @@ funktioniert:
 | `ROSHAMBO_EMBEDDING_DIM` | nein | `1024` | Vektordimension (muss zu den `VECTOR(n)`-Spalten des Schemas passen) |
 | `ROSHAMBO_LEASE_TTL_SECONDS` | nein | `300` | Standard-Lebensdauer eines Claims |
 | `ROSHAMBO_EMBEDDING_PROVIDER` | nein | `bedrock` | Welcher Embedder genutzt wird: `bedrock` (echt) oder `local` (Offline-Hash, ohne Retrieval-Signal). `Roshambo(cfg)` akzeptiert zusätzlich `placeholder` für den lexikalischen Offline-Embedder; `roshambo.embeddings.get_embedder` — und damit der Lambda-Worker — nicht |
-| `ROSHAMBO_AWS_REGION` | nein | `eu-central-1` | Region für Bedrock- und S3-Aufrufe |
+| `ROSHAMBO_AWS_REGION` | nein | `eu-central-1` | Region für S3-Aufrufe (und für die Lambda-Funktionen/den CockroachDB-Cluster dieses Projekts) |
+| `ROSHAMBO_BEDROCK_REGION` | nein | `us-east-2` | Region speziell für Bedrock-Aufrufe. Getrennt von `ROSHAMBO_AWS_REGION`, weil Bedrock-Modellzugriff pro Region freigeschaltet wird: Das Konto dieses Projekts hat in `eu-central-1` ein Titan-Text-Embeddings-V2-Kontingent von 0 und in `us-east-2` von 6000, live verifiziert (`aws bedrock list-foundation-models`/`invoke-model`, 2026-07-30). Die ~100ms Cross-Region-Kosten fallen bei Embedding-/Converse-Aufrufen an, nicht im Lease-/Claim-Pfad, den die Latenzwerte der Demo messen |
 | `ROSHAMBO_BEDROCK_MODEL_ID` | nein | `amazon.titan-embed-text-v2:0` | Bedrock-Embedding-Modell |
 | `ROSHAMBO_S3_BUCKET` | nein | nicht gesetzt | Bucket für Artefaktspeicher; nur erforderlich bei Nutzung von `put_artifact` |
 

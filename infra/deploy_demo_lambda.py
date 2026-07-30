@@ -441,6 +441,12 @@ def _demo_environment(*, cert_runtime_path: str) -> dict[str, str]:
         "ROSHAMBO_SWARM_ID": os.environ.get("ROSHAMBO_SWARM_ID") or "demo",
         "ROSHAMBO_EMBEDDING_PROVIDER": os.environ.get("ROSHAMBO_EMBEDDING_PROVIDER")
         or "placeholder",
+        # Set even while EMBEDDING_PROVIDER stays "placeholder" (which never reads it --
+        # see roshambo.memory._resolve_embedder) so the function is ready the moment
+        # someone switches the provider to "bedrock", without a separate deploy. See
+        # roshambo.config.DEFAULT_BEDROCK_REGION's docstring for why this differs from
+        # the function's own eu-central-1 region.
+        "ROSHAMBO_BEDROCK_REGION": os.environ.get("ROSHAMBO_BEDROCK_REGION") or "us-east-2",
     }
     # Optional passthrough, only set if the deploying shell has them -- same pattern as
     # deploy_lambda.py's _worker_environment.
