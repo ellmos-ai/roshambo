@@ -84,17 +84,31 @@ claude mcp add --transport http cockroachdb-managed https://cockroachlabs.cloud/
 ```
 
 If your console snippet instead gives you a service account API key rather than an
-OAuth flow, pass it as an HTTP header at add-time instead of using `/mcp` to log in —
-again, the general Claude Code mechanism (confirm the exact header name and scheme the
-Console tells you to use; do not assume it matches this example):
+OAuth flow, pass it as HTTP headers at add-time instead of using `/mcp` to log in. Two
+headers are required, not one — `mcp-cluster-id` scopes the request to your cluster,
+and `Authorization` carries the key itself. Confirmed against the CockroachDB docs
+source (`github.com/cockroachdb/docs`, `connect-to-the-cockroachdb-cloud-mcp-server.md`)
+and verified working against a real cluster on 2026-07-30 (see
+`docs/EVIDENCE-mcp.md` — the connection itself succeeds with this exact command; a
+missing CockroachDB Cloud RBAC role on the service account is a separate, later
+failure, not a sign this command is wrong):
 
 ```bash
-claude mcp add --transport http cockroachdb-managed https://cockroachlabs.cloud/mcp \
+claude mcp add cockroachdb-cloud https://cockroachlabs.cloud/mcp --transport http \
+  --header "mcp-cluster-id: <your-cluster-id>" \
   --header "Authorization: Bearer <your-service-account-api-key>"
 ```
 
-Either way, verify the connection from inside Claude Code with `/mcp` — a connected
-server shows its tool count there.
+An earlier version of this document showed only the `Authorization` header and omitted
+`mcp-cluster-id` — without it the server has no way to know which cluster the API key
+should be scoped to.
+
+Either way, verify the connection from inside Claude Code with `/mcp` (interactive) or
+`claude mcp list` (non-interactive, headless) — a connected server shows as `✔ Connected`
+there. A healthy transport connection does **not** by itself mean the service account
+can read anything: CockroachDB Cloud RBAC roles are granted to the service account
+separately, per cluster, in the Console. `docs/EVIDENCE-mcp.md` shows exactly what a
+connected-but-unauthorized service account looks like from the client side.
 
 ## Why two MCP servers
 
