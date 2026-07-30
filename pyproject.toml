@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roshambo"
-version = "0.1.0"
+version = "0.1.7"
 description = "Agentic memory fabric on CockroachDB: serializable leases and a distributed vector index, so agent swarms remember what was tried and how it ended."
 readme = "README.md"
 requires-python = ">=3.10"

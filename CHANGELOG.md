@@ -1,10 +1,35 @@
 # Changelog
 
 All notable changes to this project are documented in this file. Format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project has not yet cut a
-tagged release, so everything below is under `[Unreleased]`.
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). This project has not yet cut a
+tagged git release (no `git tag`); the `[x.y.z]` headings below track `pyproject.toml`'s
+`version` field instead, bumped on days with a coherent batch of changes.
 
 ## [Unreleased]
+
+## [0.1.7] - 2026-07-30
+
+### Verified
+
+- Re-audited the cross-host agent-id collision and empty-`agents`-table findings from
+  `docs/NEXT-RUN.md` (2026-07-27 baseline) against current source, as requested for
+  BUILD-1. Confirmed already resolved by 0.1.6, not newly fixed here: `register_agent`
+  is reachable from both the CLI (`roshambo register-agent`) and the MCP server (tool
+  `register_agent`, one of the eight contracted tools); `run_field.py` mints
+  host-qualified ids (`{agent}@{host_label}`) behind a required `--host-label`; both
+  multi-vendor prompts (`agent.md`, `starmap-agent.md`) call `register-agent` as step 0,
+  before any claim; and `claims`/`audit_log` carry immutable `framework_snapshot` /
+  `host_snapshot` columns plus a foreign key to `agents(swarm_id, agent_key)`, so an
+  audit row is traceable to a host without a join. Eight tests in
+  `tests/test_host_identity.py` cover this directly, including
+  `test_cross_host_collision_requires_different_grant_and_denial_snapshots` and
+  `test_schema_links_claim_and_audit_ids_to_registry_keys`; no new tests were added
+  since the scenario BUILD-1 asked to guard is already pinned by name.
+- Confirmed no remaining `cairn` occurrences outside the historical evidence
+  transcripts (`docs/EVIDENCE-*.md`, `docs/HANDOFF.md`), which intentionally preserve
+  pre-rename command output verbatim (see the naming note in `docs/EVIDENCE-cloud.md`
+  and `docs/EVIDENCE-iface.md`). In particular `infra/deploy_lambda.py` and
+  `demo/**` already use `roshambo-worker` throughout.
 
 ### Changed
 
@@ -18,6 +43,9 @@ tagged release, so everything below is under `[Unreleased]`.
   artifacts) is left unchanged since it records what those past runs actually used.
 - Updated `llms.txt` `Last-checked` timestamp to `2026-07-30` and updated test status verification metrics (110 passed, 51 skipped).
 - Synchronized test status badges in `README.md` and `README_de.md` to reflect current pytest test suite metrics (110 passed, 51 skipped).
+- `pyproject.toml` `version` raised from `0.1.0` to `0.1.7`, catching it up to the
+  changelog history below, which had reached `[0.1.6]` while the packaged version
+  field stayed at its initial value.
 
 ## [0.1.6] - 2026-07-28
 
