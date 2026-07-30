@@ -9,6 +9,11 @@ passes. **No true two-machine run was performed**, so that external acceptance g
 open. The original 2026-07-27 analysis below is preserved as the decision record; its
 "not built" statements describe the earlier baseline, not current source.
 
+**2026-07-30 update:** the TTL recommendation below has been applied. `run_field.py`
+and `collect_evidence.py` now default `--ttl` to 300 seconds, and the multi-vendor
+`README.md` usage example was updated to match. The "still defaults to 120 seconds"
+sentence in Part 1 below describes the pre-change state, not current source.
+
 **Original status: no run was performed.** The token budget needed to recover, and the deadline is
 far enough away that waiting costs nothing. This document exists so that whoever starts
 the next run — in a week or in a month — does not have to repeat the analysis.

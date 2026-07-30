@@ -418,7 +418,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument("--rounds", type=int, default=4)
-    parser.add_argument("--ttl", type=int, default=120, help="lease seconds")
+    parser.add_argument("--ttl", type=int, default=300, help="lease seconds")
     parser.add_argument("--timeout", type=int, default=600, help="seconds per invocation")
     parser.add_argument(
         "--agents",

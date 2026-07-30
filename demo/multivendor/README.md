@@ -109,12 +109,12 @@ Then set the environment and go:
         --swarm <a fresh swarm id> \
         --host-label <stable-public-host-label> \
         --scenario starmap \
-        --rounds 2 --instances 3 --ttl 120 --timeout 900 \
+        --rounds 2 --instances 3 --ttl 300 --timeout 900 \
         --interpreter <toolchain-dir>/venv/Scripts/python.exe
 
 Then read the result out of the database, not out of the agents' logs:
 
-    python collect_evidence.py --swarm <the same swarm id> --ttl 120
+    python collect_evidence.py --swarm <the same swarm id> --ttl 300
 
 And, for the star map, turn the run's own history into frames:
 

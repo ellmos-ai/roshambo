@@ -341,7 +341,7 @@ def render(summary: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--swarm", required=True)
-    parser.add_argument("--ttl", type=int, default=120)
+    parser.add_argument("--ttl", type=int, default=300)
     parser.add_argument(
         "--scenario",
         default="fieldkit",

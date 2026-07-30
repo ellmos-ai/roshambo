@@ -8,6 +8,14 @@ tagged release, so everything below is under `[Unreleased]`.
 
 ### Changed
 
+- `run_field.py` and `collect_evidence.py` now default `--ttl` to 300 seconds instead of
+  120. `docs/NEXT-RUN.md` measured task durations from the `starmap-2026-07-27` field run
+  (median 82s, longest 355s, 5 of 11 tasks over the 120s TTL) and recommended 300s as the
+  library's own default (`config.py`'s `DEFAULT_LEASE_TTL_SECONDS`), needing no separate
+  justification and covering ten of the eleven measured tasks outright. The
+  `demo/multivendor/README.md` usage example was updated to match; historical evidence
+  (`docs/EVIDENCE-multivendor.md`, `PROTOCOL.md`, and the `fieldkit-run`/`starmap-run`
+  artifacts) is left unchanged since it records what those past runs actually used.
 - Updated `llms.txt` `Last-checked` timestamp to `2026-07-30` and updated test status verification metrics (110 passed, 51 skipped).
 - Synchronized test status badges in `README.md` and `README_de.md` to reflect current pytest test suite metrics (110 passed, 51 skipped).
 
