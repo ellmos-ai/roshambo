@@ -119,7 +119,7 @@ _MOCK_CLAIMS = [
         "acquired_at": (_MOCK_NOW - timedelta(seconds=40)).isoformat(),
         "expires_at": (_MOCK_NOW + timedelta(seconds=260)).isoformat(),
         "framework": "aws-lambda-bedrock",
-        "host": "aws-lambda:us-east-1:roshambo-worker",
+        "host": "aws-lambda:eu-central-1:roshambo-worker",
     }
 ]
 

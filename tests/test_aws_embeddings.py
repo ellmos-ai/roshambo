@@ -141,7 +141,7 @@ def test_bedrock_embed_builds_titan_v2_request_and_parses_response():
         vector = embedder.embed("What are the different services that you offer?")
 
     assert len(vector) == 1024
-    mock_client_factory.assert_called_once_with("bedrock-runtime", region_name="us-east-1")
+    mock_client_factory.assert_called_once_with("bedrock-runtime", region_name="eu-central-1")
 
     call_kwargs = mock_bedrock.invoke_model.call_args.kwargs
     assert call_kwargs["modelId"] == "amazon.titan-embed-text-v2:0"

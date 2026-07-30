@@ -196,7 +196,7 @@ def cmd_create_role(args: argparse.Namespace) -> None:
     sts = boto3.client("sts")
 
     account_id = sts.get_caller_identity()["Account"]
-    region = _env("AWS_REGION", "us-east-1")
+    region = _env("AWS_REGION", "eu-central-1")
     worker_model_id = _env("WORKER_BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0")
     embed_model_id = _env("BEDROCK_MODEL_ID", "amazon.titan-embed-text-v2:0")
     s3_bucket = _env("S3_BUCKET", None)
@@ -277,7 +277,7 @@ def cmd_deploy(args: argparse.Namespace) -> None:
         )
 
     lam = boto3.client("lambda")
-    region = _env("AWS_REGION", "us-east-1")
+    region = _env("AWS_REGION", "eu-central-1")
 
     if args.role_arn:
         role_arn = args.role_arn

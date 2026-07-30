@@ -332,7 +332,7 @@ def cmd_deploy(args: argparse.Namespace) -> None:
         )
 
     lam = boto3.client("lambda")
-    region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
+    region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "eu-central-1"
 
     if args.role_arn:
         role_arn = args.role_arn

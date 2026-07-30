@@ -28,7 +28,7 @@ def test_put_artifact_returns_s3_uri_and_calls_put_object():
         uri = put_artifact(_cfg(), "trails/abc123.txt", b"hello world", "text/plain")
 
     assert uri == "s3://roshambo-test-bucket/trails/abc123.txt"
-    mock_client_factory.assert_called_once_with("s3", region_name="us-east-1")
+    mock_client_factory.assert_called_once_with("s3", region_name="eu-central-1")
     mock_s3.put_object.assert_called_once_with(
         Bucket="roshambo-test-bucket",
         Key="trails/abc123.txt",

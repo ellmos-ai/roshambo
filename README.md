@@ -413,7 +413,7 @@ Everything is read from the environment under the `ROSHAMBO_` prefix
 | `ROSHAMBO_EMBEDDING_DIM` | no | `1024` | Vector dimension (must match the schema's `VECTOR(n)` columns) |
 | `ROSHAMBO_LEASE_TTL_SECONDS` | no | `300` | Default claim lifetime |
 | `ROSHAMBO_EMBEDDING_PROVIDER` | no | `bedrock` | Which embedder to use: `bedrock` (real) or `local` (offline hash, no retrieval signal). `Roshambo(cfg)` additionally accepts `placeholder` for the lexical offline embedder; `roshambo.embeddings.get_embedder` — and therefore the Lambda worker — does not |
-| `ROSHAMBO_AWS_REGION` | no | `us-east-1` | Region for Bedrock and S3 calls |
+| `ROSHAMBO_AWS_REGION` | no | `eu-central-1` | Region for Bedrock and S3 calls |
 | `ROSHAMBO_BEDROCK_MODEL_ID` | no | `amazon.titan-embed-text-v2:0` | Bedrock embedding model |
 | `ROSHAMBO_S3_BUCKET` | no | unset | Bucket for artifact storage; required only if you use `put_artifact` |
 
