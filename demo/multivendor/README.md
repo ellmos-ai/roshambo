@@ -140,6 +140,78 @@ resolve. More concurrent arrivals is the honest remedy. Loosening the definition
 collision is not, and `PROTOCOL.md` was committed before any of this to make that
 impossible after the fact.
 
+## BotAgent -- a protocol-conformance simulator, and the shipped stress test
+
+`bot_agent.py` is a fourth kind of participant: not a vendor CLI, not driven by any
+language model, just a small deterministic Python loop that speaks the exact same
+protocol as everyone else -- register, claim, hold briefly, release -- through
+`roshambo.memory.Roshambo`, never a shortcut around it. That is the point: Roshambo
+coordinates whoever speaks the protocol, not a fixed list of vendors, and this
+script is the proof you don't need an LLM key to check that.
+
+### The 30-second proof anyone can run
+
+```
+python demo/multivendor/bot_agent.py --dry-run --bots 3
+```
+
+Three `BotAgent A/B/C` instances register under their own identity and claim
+against *each other only*, on a fresh auto-generated swarm (never the real field
+run's), for a few seconds. No files, no project, no other participants -- a pure
+coordination check. It prints a summary and exits non-zero if it ever found two
+simultaneous holders of the same task (expected: never). If you are evaluating
+this submission and want to see the core guarantee hold without waiting for a
+field run or holding any vendor credentials, this is the command.
+
+### Storm mode: extra contention alongside a real run
+
+Drop `--dry-run` and pass the field run's own `--swarm` to add bot-driven load
+*while* the real agents are actually building something -- useful for raising
+collision density (video material) or stress-testing a swarm under more realistic
+concurrency than a handful of LLM sessions produce on their own:
+
+```
+python demo/multivendor/bot_agent.py --swarm <same swarm as run_field.py> --bots 3 \
+  --tasks starmap:task:01,starmap:task:02
+```
+
+### Adaptive rate, and why the interval log is worth keeping
+
+Each bot's claim interval backs off (multiplies up) on a denial and gets bolder
+(multiplies down) on a grant, clamped to `--min-interval`/`--max-interval`. This is
+not decoration: it makes the bot self-limiting under contention (kinder to the
+cluster's Request Unit budget than a fixed-rate loop), makes it behave like a
+plausible competitor instead of a blunt hammer, and is fair -- a bot on a losing
+streak backs off rather than crowding a resource forever. `--log-interval-csv
+<path>` writes every (timestamp, interval, outcome) row; that curve -- the rate
+visibly breathing with contention -- is what the project's demo video uses.
+
+### Reading the output
+
+The final summary (stderr) reports, per bot and in total: attempts, granted,
+denied, errored, and the final interval each bot settled at. The one line that
+actually matters is `two simultaneous holders of the same task, at any point:` --
+`no` is the expected, passing result; `YES -- CONTRACT VIOLATION` names the
+resource and the two claim ids and means the core guarantee did not hold. Pass
+`--json` for the same report as structured data (also on stdout), suitable for
+copying into an evidence file.
+
+A won claim is always released -- via `try`/`finally`, including when the
+simulated hold is interrupted (Ctrl-C) or raises -- so a bot never starves the
+swarm it is supposed to be stress-testing.
+
+### Request Unit cost -- read this before raising the defaults
+
+Every attempt is at least a claim write plus an audit-log write; a grant adds a
+release write plus its own audit write. `--max-attempts-total` and `--time-limit`
+are hard ceilings, on by default (conservative: a few hundred attempts, well under
+two minutes), and a plan that would exceed either is refused unless you pass
+`--i-have-checked-the-ru-budget`. The RU number the script prints is a labelled
+*planning estimate* (see `estimate_ru_cost` in the source) -- not a measurement.
+CockroachDB Basic bills Request Units against a monthly cap; check the cluster's
+own console before turning `--bots`, `--max-attempts-per-bot`, or `--time-limit`
+up substantially, especially against a shared or production cluster.
+
 ## Vendor quirks worth knowing
 
 - **Antigravity (`agy`)** requires `--effort` on its current models and rejects the
