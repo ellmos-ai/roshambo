@@ -169,13 +169,18 @@ The CockroachDB cluster, the Lambda functions, and S3 all run in `eu-central-1`
 timing numbers measure, so it stays regional. Bedrock calls (`roshambo.embeddings.BedrockEmbedder`,
 `roshambo.aws.worker`'s Claude call) use a **separate** `ROSHAMBO_BEDROCK_REGION`,
 defaulting to `us-east-2` (Ohio): Bedrock model access is granted per region, and this
-project's AWS account has a `eu-central-1` Titan Text Embeddings V2 quota of **0** — new
-accounts do not get Bedrock model access in every region automatically — while `us-east-2`
-had a usable quota (6000), confirmed live with `aws bedrock invoke-model` before relying
-on it, not assumed. The ~100 ms this adds lands only on embedding/Converse calls, never on
-a lease transaction. See `roshambo.config`'s `DEFAULT_BEDROCK_REGION` docstring for the
-same reasoning in code, and `tests/test_core_recall.py::test_recall_with_the_real_embedder`
-for the one test that actually exercises this path end to end.
+project's AWS account lists Titan Text Embeddings V2 in `eu-central-1` but has an
+on-demand quota of **0** there — new accounts do not get usable Bedrock model access in
+every region automatically. `us-east-2` is not a proven-reliable alternative either: one
+real `InvokeModel` call succeeded there, but its on-demand quota also reads 0 on every
+check made since (`aws service-quotas list-service-quotas`). See
+`docs/EVIDENCE-bedrock.md` for exactly what was tried, the one real success on record,
+and what AWS reports — this is not resolved, only diagnosed. The ~100 ms cross-region
+cost, when it does work, lands only on
+embedding/Converse calls, never on a lease transaction. See `roshambo.config`'s
+`DEFAULT_BEDROCK_REGION` docstring for the same reasoning in code, and
+`tests/test_core_recall.py::test_recall_with_the_real_embedder` for the one test that
+would exercise this path end to end — it has not yet completed (see the evidence file).
 
 ## Run it as a Lambda (the intended host)
 

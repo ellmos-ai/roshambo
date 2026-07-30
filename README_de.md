@@ -267,7 +267,9 @@ In diesem Repository implementiert, mit Tests:
 - Der `Roshambo`-Client: `claim` / `release` / `remember` / `recall` / `decide` /
   `status`, plus `heartbeat`, `who_has`, `learn`, `reinforce` — `src/roshambo/memory.py`
 - Embeddings: Amazon Titan Text Embeddings V2 über Bedrock, mit einem Offline-Fallback,
-  der explizit nicht-semantisch ist, für die Entwicklung ohne AWS-Zugangsdaten —
+  der explizit nicht-semantisch ist, für alle Fälle in denen Bedrock nicht erreichbar
+  ist — keine Zugangsdaten, oder, wie aktuell auf diesem Projektkonto, kein nutzbares
+  On-Demand-Kontingent (siehe [`docs/EVIDENCE-bedrock.md`](docs/EVIDENCE-bedrock.md)) —
   `src/roshambo/embeddings.py`
 - `roshambo-worker`, ein AWS-Lambda-Handler, der den Zyklus claim → recall → work →
   remember → release umsetzt — `src/roshambo/aws/worker.py`
@@ -430,7 +432,7 @@ funktioniert:
 | `ROSHAMBO_LEASE_TTL_SECONDS` | nein | `300` | Standard-Lebensdauer eines Claims |
 | `ROSHAMBO_EMBEDDING_PROVIDER` | nein | `bedrock` | Welcher Embedder genutzt wird: `bedrock` (echt) oder `local` (Offline-Hash, ohne Retrieval-Signal). `Roshambo(cfg)` akzeptiert zusätzlich `placeholder` für den lexikalischen Offline-Embedder; `roshambo.embeddings.get_embedder` — und damit der Lambda-Worker — nicht |
 | `ROSHAMBO_AWS_REGION` | nein | `eu-central-1` | Region für S3-Aufrufe (und für die Lambda-Funktionen/den CockroachDB-Cluster dieses Projekts) |
-| `ROSHAMBO_BEDROCK_REGION` | nein | `us-east-2` | Region speziell für Bedrock-Aufrufe. Getrennt von `ROSHAMBO_AWS_REGION`, weil Bedrock-Modellzugriff pro Region freigeschaltet wird: Das Konto dieses Projekts hat in `eu-central-1` ein Titan-Text-Embeddings-V2-Kontingent von 0 und in `us-east-2` von 6000, live verifiziert (`aws bedrock list-foundation-models`/`invoke-model`, 2026-07-30). Die ~100ms Cross-Region-Kosten fallen bei Embedding-/Converse-Aufrufen an, nicht im Lease-/Claim-Pfad, den die Latenzwerte der Demo messen |
+| `ROSHAMBO_BEDROCK_REGION` | nein | `us-east-2` | Region speziell für Bedrock-Aufrufe. Getrennt von `ROSHAMBO_AWS_REGION`, weil Bedrock-Modellzugriff pro Region freigeschaltet wird, und `eu-central-1` das Modell zwar listet, aber ein On-Demand-Kontingent von 0 dafür hat. `us-east-2` ist ebenfalls keine verlässlich funktionierende Alternative: Ein echter Aufruf gelang dort einmal, aber das On-Demand-Kontingent zeigt seither bei jeder Prüfung ebenfalls 0 (`aws service-quotas list-service-quotas`) — die vollständige, noch ungeklärte Geschichte steht in [`docs/EVIDENCE-bedrock.md`](docs/EVIDENCE-bedrock.md). Die ~100ms Cross-Region-Kosten, wenn es funktioniert, fallen bei Embedding-/Converse-Aufrufen an, nicht im Lease-/Claim-Pfad, den die Latenzwerte der Demo messen |
 | `ROSHAMBO_BEDROCK_MODEL_ID` | nein | `amazon.titan-embed-text-v2:0` | Bedrock-Embedding-Modell |
 | `ROSHAMBO_S3_BUCKET` | nein | nicht gesetzt | Bucket für Artefaktspeicher; nur erforderlich bei Nutzung von `put_artifact` |
 
@@ -467,7 +469,7 @@ hat:
 
 | AWS-Dienst | Wie Roshambo ihn nutzt | Wo in diesem Repository |
 |---|---|---|
-| **Amazon Bedrock** | Titan Text Embeddings V2 (1024-dimensional) embedded jeden Trail und jedes Fact, bevor es nach CockroachDB geschrieben wird; ein Offline-Embedder, der explizit nicht-semantisch ist, springt ein, wenn keine AWS-Zugangsdaten konfiguriert sind, damit der Rest des Systems trotzdem läuft | `src/roshambo/embeddings.py` |
+| **Amazon Bedrock** | Titan Text Embeddings V2 (1024-dimensional) ist der Codepfad zum Embedden jedes Trails und jedes Facts, bevor es nach CockroachDB geschrieben wird; ein Offline-Embedder, der explizit nicht-semantisch ist, springt ein, wenn Bedrock nicht erreichbar ist (keine Zugangsdaten, oder, wie aktuell der Fall, kein nutzbares On-Demand-Kontingent — siehe [`docs/EVIDENCE-bedrock.md`](docs/EVIDENCE-bedrock.md)), damit der Rest des Systems trotzdem läuft | `src/roshambo/embeddings.py` |
 | **AWS Lambda** | `roshambo-worker`: ein autonomer Handler, der eine Ressource beansprucht, das Gedächtnis prüft, eine Arbeitseinheit erledigt und zurückschreibt, was passiert ist — die Hälfte des Briefings zu „Agenten entstehen autonom und schreiben ständig" | `src/roshambo/aws/worker.py` |
 | **Amazon S3** | Große Trail-/Fact-Payloads werden per `s3://`-Referenz (`artifact_uri`) gespeichert statt inline in CockroachDB-Zeilen | `src/roshambo/aws/s3.py` |
 | **Amazon ECS Fargate** *(optional)* | Geplantes Hosting für die Demo-Webanwendung | `demo/` (siehe [Stand](#stand)) |
@@ -520,9 +522,15 @@ aktuelle Registereintrag später geändert wird. Siehe `Roshambo._audit` in
   Ergebnis auf gemeinsame Wörter und Zeichen-Trigramm-Überlappung zurück, nicht auf eine
   verifizierte Bedeutungserfassung (siehe
   [`docs/EVIDENCE-core.md`](docs/EVIDENCE-core.md)). Der Amazon-Titan-Embedding-Pfad, der
-  den Abruf tatsächlich semantisch machen würde, ist implementiert, wurde aber in dieser
-  Umgebung noch nicht mit AWS-Zugangsdaten ausgeführt (`test_recall_with_the_real_embedder`
-  in `tests/test_core_recall.py`, aktuell übersprungen). Bis dieser Test gelaufen ist,
+  den Abruf tatsächlich semantisch machen würde, ist implementiert, und ein direkter
+  Aufruf gegen den echten Bedrock-Dienst (echte Zugangsdaten, echte Region, echter
+  1024-dim-Vektor) belegt, dass die Integration selbst funktioniert — aber
+  `test_recall_with_the_real_embedder` in `tests/test_core_recall.py`, der Test, der
+  semantisches Retrieval Ende-zu-Ende zeigen würde, ist nie durchgelaufen: jeder Versuch
+  wird von einem Bedrock-On-Demand-Kontingent gedrosselt, das auf diesem Konto bei 0
+  steht (kein Zugangsdaten-Problem — siehe
+  [`docs/EVIDENCE-bedrock.md`](docs/EVIDENCE-bedrock.md) für die genauen Versuche und was
+  AWS dazu meldet). Bis dieser Test vollständig gelaufen ist,
   sollte keine Aussage in diesem Dokument als „recall versteht Bedeutung" gelesen werden
   — nur als „recall findet einen früheren Eintrag auch bei anderer Formulierung wieder".
 - Dieses README behauptet keine Performance- oder Skalierungszahlen; die unter

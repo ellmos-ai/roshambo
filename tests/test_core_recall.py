@@ -5,8 +5,11 @@ Scope note, stated up front so nothing here is over-read: these tests run with
 demonstrate that the write path, the `VECTOR(1024)` column, the vector index and the
 ranking in `recall()` work end to end against a real cluster, and that a re-phrased
 query reaches the right trail. They do **not** measure semantic quality — that needs the
-Bedrock embedder, exercised by `test_recall_with_the_real_embedder` below, which skips
-until `roshambo.embeddings` and AWS credentials are available.
+Bedrock embedder, exercised by `test_recall_with_the_real_embedder` below. As of
+2026-07-30 it reliably skips on this project's AWS account not because credentials or
+`roshambo.embeddings` are missing (both are present and correct), but because Bedrock's
+on-demand Titan Text Embeddings V2 quota reads 0 on every check made so far, in every
+region tried — see `docs/EVIDENCE-bedrock.md` before assuming a credentials problem.
 """
 
 from __future__ import annotations
@@ -325,7 +328,12 @@ def test_recall_with_the_real_embedder(cfg: RoshamboConfig):
     """The same criterion with Amazon Titan embeddings, once the AWS lane has landed.
 
     Skips — loudly, not silently — while `roshambo.embeddings` or the credentials are
-    missing, so the result above is never mistaken for a semantic measurement.
+    missing, so the result above is never mistaken for a semantic measurement. The skip
+    below with `ThrottlingException` in its message is a different, currently-observed
+    cause: real credentials and a real region, rejected purely on Bedrock's on-demand
+    rate limit (reads 0 for this account/model in every region checked). Do not read a
+    `ThrottlingException` skip as "credentials are missing" — see
+    `docs/EVIDENCE-bedrock.md` for the one call that did succeed and why the rest did not.
     """
     embeddings = pytest.importorskip("roshambo.embeddings", reason="AWS lane has not landed yet")
 
