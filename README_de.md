@@ -1,6 +1,7 @@
 # Roshambo
 
-[![Tests](https://img.shields.io/badge/Tests-110%20passed%20%7C%2051%20skipped-success.svg)](https://github.com/ellmos-ai/roshambo)
+[![Tests](https://img.shields.io/badge/Tests-127%20passed%20%7C%2051%20skipped-success.svg)](https://github.com/ellmos-ai/roshambo)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](pyproject.toml)
 [![Ecosystem](https://img.shields.io/badge/ellmos--ai-framework-blue.svg)](https://github.com/ellmos-ai)
 [![Umbrella](https://img.shields.io/badge/open--bricks-umbrella-teal.svg)](https://github.com/open-bricks)
 [![LLM-Ready](https://img.shields.io/badge/LLM-Ready-brightgreen.svg)](llms.txt)
@@ -22,6 +23,16 @@ Roshambo ist der englische Kurzname für Schere-Stein-Papier: Alle werfen gleich
 und genau ein Wurf gewinnt. Das ist die Form des Problems, das dieses Projekt für
 Agentenschwärme löst — nur entscheidet hier nicht der Zufall, sondern eine
 serialisierbare Transaktion in CockroachDB.
+
+> **[Live-Demo →](https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/)**
+> Eine öffentliche AWS-Lambda-Function-URL, die die echte App gegen den echten
+> CockroachDB-Cloud-Cluster laufen lässt — vor dem Vertrauen in irgendetwas anderes
+> `/api/health` auf `{"mode":"live"}` prüfen. Dieser Endpunkt hat bewusst keine
+> Authentifizierung (siehe [„Not built here" in demo/README.md](demo/README.md#not-built-here));
+> er gibt keine Zugangsdaten preis, nur Roshambos eigene Koordinationsdaten.
+> Deploy-Details: `infra/deploy_demo_lambda.py`, [`demo/README.md`](demo/README.md#deployed).
+
+![Roshambo-Demo-Webanwendung: ein dunkel gestaltetes Dashboard mit Swarm-ID, Zählern für Agenten/Claims/Trails, einer Active-Claims-Tabelle mit einem von mcp-agent gehaltenen Lease, einer Turned-Away-Tabelle mit zwei weiteren Agenten, denen mitgeteilt wurde, wer die Ressource hält und woran gearbeitet wird, sowie einem Recall-Suchfeld](docs/screenshots/01-collision.png)
 
 ```mermaid
 graph TD
@@ -287,12 +298,19 @@ nicht unabhängig dokumentiert zu behandeln:
 
 - Infrastructure-as-Code / Provisioning-Skripte (`infra/`) — Lambda-Packaging und
   -Deployment, IAM-Policy, `ccloud`-basiertes Cluster-Provisioning
+
+Deployed und erreichbar, nicht nur paketiert:
+
 - Die Demo-Webanwendung (`demo/`) — ein FastAPI-Dienst mit statischem Frontend und
-  einem `mock`-Modus-Fallback, wenn kein CockroachDB-Cluster konfiguriert ist
+  einem `mock`-Modus-Fallback, wenn kein CockroachDB-Cluster konfiguriert ist — läuft
+  live hinter einer öffentlichen AWS-Lambda-Function-URL (siehe Link nahe dem Anfang
+  dieser README) und beantwortet `/api/health` mit `{"mode":"live"}` gegen den echten
+  Cluster. Deploy-Werkzeug: `infra/deploy_demo_lambda.py`; was am Deployment selbst
+  verifiziert ist und was nicht: [`demo/README.md`](demo/README.md#deployed).
 
 Zum Zeitpunkt dieses Schreibens noch nicht begonnen:
 
-- Eine gehostete Demo-URL und das Einreichungsvideo
+- Das Einreichungsvideo
 
 ## Schnellstart
 
@@ -554,6 +572,16 @@ pytest                 # Tests, die einen laufenden Cluster brauchen, sind mit `
                         # siehe tests/conftest.py
 ruff check .
 ```
+
+## Herkunft
+
+Dieses Repository wurde von KI-Coding-Agenten (Claude Code, in parallelen Bahnen gemäß
+`CONTRACT.md`) für den CockroachDB-×-AWS-Hackathon gebaut, unter menschlicher Anleitung
+und Prüfung bei jedem Commit — nicht unbeaufsichtigt. Nichts hier wird als aus einem
+bestimmten Trainingskorpus stammend dargestellt; folgt ein Design einer externen
+Konvention (z. B. dem `SKILL.md`-Format von `cockroachlabs/cockroachdb-skills`), wird
+diese Quelle im Text genannt. Wer eine Passage findet, die eher wie von irgendwoher
+kopiert als für dieses Projekt geschrieben wirkt, möge bitte ein Issue eröffnen.
 
 ## Lizenz
 
