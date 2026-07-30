@@ -147,6 +147,67 @@ VENDORS: dict[str, Vendor] = {
     "agy": AgyVendor(agent_id="agy", vendor="google"),
 }
 
+# Human-facing labels for the demo UI and the video, not the technical identity used
+# for coordination (that stays `agent_id`, host-qualified, untouched -- see
+# `run_round()`). Determined from each vendor's own configuration where it is
+# unambiguous, not guessed:
+#   - "codex": `model` in `~/.codex/config.toml`, read directly.
+#   - "agy": `AgyVendor.model` above, already pinned in this file.
+#   - "claude": the account's configured default is an alias ("opus"), not a single
+#     resolved version string this script can read reliably -- named as vendor +
+#     tool rather than invented, per the same rule.
+VENDOR_DISPLAY_NAMES: dict[str, str] = {
+    "claude": "Claude (Claude Code)",
+    "codex": "GPT-5.6 Terra (Codex)",
+    "agy": "Gemini 3.6 Flash (Antigravity)",
+}
+
+
+def annotate_display_names(
+    env: dict[str, str], swarm_id: str, host_label: str, keys: list[str], instances: int
+) -> None:
+    """Best-effort: attach a human display name to each agent id already registered.
+
+    Deliberately separate from the agents' own `register-agent` step in the prompt
+    templates (`prompts/*.md`) rather than adding a `--capabilities-json` argument
+    there. That call is reconstructed by each vendor's own shell from an English
+    instruction, and embedding a quoted JSON object in it is exactly the kind of
+    nested-quoting failure this project hit repeatedly while smoke-testing Codex's
+    sandbox today -- not worth risking on the one step every agent's run depends on
+    (`register-agent` gates whether the round proceeds at all). Instead this writes
+    the same `agents.capabilities` JSONB column directly, from here, after an agent
+    has already registered itself -- `register_agent`'s `ON CONFLICT ... DO UPDATE`
+    (see `roshambo/memory.py`) makes this call safe to repeat and never
+    destructive: it only ever touches the display metadata, never a claim, a lease,
+    or the audit trail those decisions are proven from. Any failure here is logged
+    and swallowed -- annotation is cosmetic, coordination correctness is not.
+    """
+    try:
+        from rsb import resolve_dsn
+        from roshambo.config import RoshamboConfig
+        from roshambo.memory import PlaceholderEmbedder, Roshambo
+
+        dsn = resolve_dsn(agent_env(env) | {"ROSHAMBO_DSN_FILE": env.get("ROSHAMBO_DSN_FILE", "")})
+        cfg = RoshamboConfig(dsn=dsn, swarm_id=swarm_id)
+        client = Roshambo(cfg, embedder=PlaceholderEmbedder(dim=cfg.embedding_dim))
+        try:
+            for key in keys:
+                vendor = VENDORS[key]
+                display_name = VENDOR_DISPLAY_NAMES.get(key, f"{vendor.vendor}/{key}")
+                for instance in range(1, instances + 1):
+                    base_id = vendor.agent_id if instances == 1 else f"{vendor.agent_id}-{instance}"
+                    agent_id = f"{base_id}@{host_label}"
+                    client.register_agent(
+                        framework=vendor.vendor,
+                        host=host_label,
+                        capabilities={"display_name": display_name, "color_group": key},
+                        agent_id=agent_id,
+                    )
+        finally:
+            client.close()
+    except Exception as exc:  # noqa: BLE001 - cosmetic annotation must never break the run
+        print(f"  (display-name annotation skipped: {exc})", file=sys.stderr)
+
 
 @dataclass
 class Invocation:
@@ -506,6 +567,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.interpreter,
             )
         )
+        annotate_display_names(env, args.swarm, args.host_label, keys, args.instances)
         manifest = workspace / "_logs" / "run.json"
         manifest.write_text(
             json.dumps(

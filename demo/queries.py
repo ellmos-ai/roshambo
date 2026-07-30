@@ -33,15 +33,27 @@ from roshambo.db import connect, fetch_all
 
 def active_claims(cfg: RoshamboConfig) -> list[dict]:
     """Every non-expired claim in ``cfg.swarm_id``, most recently acquired first,
-    each annotated with the immutable framework/host snapshot captured at grant time.
+    each annotated with the immutable framework/host snapshot captured at grant time,
+    plus a live ``display_name`` for the UI.
+
+    ``display_name`` is deliberately *not* part of the snapshot: unlike
+    ``framework``/``host`` (evidence -- what a claim actually proved, frozen so a
+    later re-registration cannot rewrite it), a display name is purely cosmetic
+    labelling (``agents.capabilities->>'display_name'``, see
+    ``demo/multivendor/bot_agent.py`` and ``run_field.py``'s
+    ``annotate_display_names``), so reading the current registry row for it is fine
+    -- and it may simply be absent (``None``) for an agent that never had one set,
+    which the frontend falls back to the raw ``agent_id`` for.
     """
     with connect(cfg) as conn:
         rows = fetch_all(
             conn,
             """
             SELECT c.resource, c.agent_id, c.intent, c.acquired_at, c.expires_at,
-                   c.framework_snapshot, c.host_snapshot
+                   c.framework_snapshot, c.host_snapshot, a.capabilities->>'display_name'
               FROM claims c
+              LEFT JOIN agents a
+                ON a.swarm_id = c.swarm_id AND a.agent_key = c.agent_id
              WHERE c.swarm_id = %s AND c.expires_at > now()
              ORDER BY c.acquired_at DESC
             """,
@@ -56,8 +68,9 @@ def active_claims(cfg: RoshamboConfig) -> list[dict]:
             "expires_at": expires_at.isoformat(),
             "framework": framework,
             "host": host,
+            "display_name": display_name,
         }
-        for resource, agent_id, intent, acquired_at, expires_at, framework, host in rows
+        for resource, agent_id, intent, acquired_at, expires_at, framework, host, display_name in rows
     ]
 
 
@@ -88,7 +101,8 @@ def recent_denials(cfg: RoshamboConfig, limit: int = 10) -> list[dict]:
             conn,
             """
             SELECT t.trail_id, t.agent_id, t.topic, t.evidence, t.detail, t.created_at,
-                   a.framework, a.host, h.framework
+                   a.framework, a.host, a.capabilities->>'display_name',
+                   h.framework, h.capabilities->>'display_name'
               FROM trails t
               LEFT JOIN agents a
                 ON a.swarm_id = t.swarm_id AND a.agent_key = t.agent_id
@@ -110,7 +124,9 @@ def recent_denials(cfg: RoshamboConfig, limit: int = 10) -> list[dict]:
         created_at,
         framework,
         host,
+        display_name,
         holder_framework,
+        holder_display_name,
     ) in rows:
         detail = detail or {}
         denials.append(
@@ -122,6 +138,7 @@ def recent_denials(cfg: RoshamboConfig, limit: int = 10) -> list[dict]:
                 "created_at": created_at.isoformat(),
                 "framework": framework,
                 "host": host,
+                "display_name": display_name,
                 "resource": detail.get("resource"),
                 "held_by": detail.get("held_by"),
                 # Resolved by join, not stored: a denied worker learns the holder's
@@ -129,6 +146,7 @@ def recent_denials(cfg: RoshamboConfig, limit: int = 10) -> list[dict]:
                 # belongs to. Looking it up here keeps the answer current instead of
                 # freezing whatever the loser could see at denial time.
                 "holder_framework": holder_framework,
+                "holder_display_name": holder_display_name,
                 "holder_intent": detail.get("holder_intent"),
             }
         )

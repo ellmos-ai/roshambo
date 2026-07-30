@@ -177,6 +177,19 @@ function renderSystemCell(claim) {
 }
 
 /**
+ * The name a human should read for an agent: its registered display name
+ * (agents.capabilities->>'display_name', see demo/multivendor/bot_agent.py and
+ * run_field.py's annotate_display_names) when one was set, otherwise the raw
+ * technical agent id -- the colour badge from renderSystemCell/badgeClassFor is
+ * never the only differentiator, this text always sits next to it.
+ * @param {Object} row A claim or denial row carrying `display_name` and `agent_id`
+ * @returns {string} HTML-escaped label
+ */
+function displayLabel(row) {
+  return escapeHtml(row.display_name || row.agent_id || '—');
+}
+
+/**
  * Poll /api/claims and update the claims table.
  */
 async function pollClaims() {
@@ -199,7 +212,7 @@ async function pollClaims() {
       <tr>
         <td>${escapeHtml(claim.resource || '—')}</td>
         <td>${renderSystemCell(claim)}</td>
-        <td>${escapeHtml(claim.agent_id || '—')}</td>
+        <td>${displayLabel(claim)}</td>
         <td>${escapeHtml(claim.intent || '—')}</td>
         <td>${formatLocalTime(claim.acquired_at)}</td>
         <td>${formatLocalTime(claim.expires_at)}</td>
@@ -248,11 +261,17 @@ async function pollDenials() {
     const holderIntent = denial.holder_intent
       ? `<div class="denial-intent">${escapeHtml(denial.holder_intent)}</div>`
       : `<div class="denial-intent denial-intent--prose">${escapeHtml(denial.evidence || '—')}</div>`;
+    // Name always accompanies the colour badge (never the only differentiator):
+    // the holder's registered display name when one was set, otherwise the same
+    // shortened id this cell has always shown.
+    const holderLabel = denial.holder_display_name
+      ? escapeHtml(denial.holder_display_name)
+      : escapeHtml(shortId(denial.held_by));
     return `
       <tr>
         <td>${escapeHtml(denial.resource || '—')}</td>
         <td>${asked}</td>
-        <td class="denial-holder">${escapeHtml(shortId(denial.held_by))}</td>
+        <td class="denial-holder">${holderLabel}</td>
         <td>${holderFramework}${holderIntent}</td>
         <td>${formatLocalTime(denial.created_at)}</td>
       </tr>
