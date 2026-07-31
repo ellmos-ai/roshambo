@@ -138,7 +138,8 @@ That gives one tool at two levels:
 
 Any file-based lock has to protect the lock file itself, and that regress has to end
 somewhere. In the file world it ends at `O_EXCL`: an atomic create supplied by the
-operating system. Our own lock module states the boundary plainly — atomic claim
+operating system. Our own lock module, [lock-master](https://github.com/dev-bricks/lock-master),
+states the boundary plainly — atomic claim
 assignment via `O_EXCL` is "the race-safe *I am taking this work package* that a pure
 file format cannot provide."
 
@@ -159,7 +160,8 @@ than only within one.
 
 ### Assignment is not observance — and where observance can be enforced
 
-The same lock module is careful about this and we keep its distinction: `O_EXCL` "makes
+The same lock module ([lock-master](https://github.com/dev-bricks/lock-master), the file-based
+team-lock system Roshambo grew out of) is careful about this and we keep its distinction: `O_EXCL` "makes
 the *assignment* race-safe, not the *observance*." Roshambo inherits that distinction,
 but not uniformly, and the difference is worth stating precisely because it is usually
 overclaimed:
@@ -420,6 +422,16 @@ offered as a demonstration rather than as homework. The apparatus is in
 attempt that produced no collisions at all, and why — is in
 [`docs/EVIDENCE-multivendor.md`](docs/EVIDENCE-multivendor.md). The counting rules were
 committed before the agents ran.
+
+**Two machines, five vendors, one shared artefact — the field run.** On 2026-07-30,
+27 participants — agents from Anthropic, Google, Moonshot, Zhipu and MiniMax, OpenAI
+Codex instances, and deterministic script bots — on two machines shared one CockroachDB
+Cloud cluster and one repository, building an invented star chart under lease discipline:
+1,226 genuine collisions, 147 of them across the machine boundary, 1,245 of 1,245 denials
+naming the exact current holder, and never two live leases (the detector's only three
+flags reconstructed in [`docs/EVIDENCE-defects.md`](docs/EVIDENCE-defects.md)). The
+artefact, the agents' own reports and the timelapse live in the evidence repository
+[ellmos-ai/roshambo-starmap](https://github.com/ellmos-ai/roshambo-starmap).
 
 ## Configuration
 
