@@ -576,6 +576,36 @@ pytest                 # tests needing a live cluster are marked `live` and skip
 ruff check .
 ```
 
+## What's next
+
+Roshambo was built for a real, ongoing problem, so it does not stop at the hackathon.
+Three extensions are designed and deliberately not yet built — stated as outlook, not
+as features:
+
+![CockroachDB as satellite GPS for local agents — who works where, on what, right now](assets/banner-gps-outlook.png)
+
+- **CockroachDB as satellite GPS for agents.** The `claims` table already knows *who*
+  works *where* (host snapshot) on *what* (resource + intent) and for *how long*
+  (expiry, heartbeat). A "GPS" for a local fleet is a read view over that same data —
+  a live map of every agent on every machine, without any agent knowing the others
+  exist. The first step exists: the
+  [replay view](https://ellmos-ai.github.io/roshambo-starmap/replay/) built for the
+  submission video turns any swarm's `audit_log` back into a watchable game; turning
+  it from replay to live tracking is a projection change, not a schema change.
+- **Agents spawned from AWS.** `roshambo-worker` (the Lambda handler implementing
+  claim → recall → work → remember → release) is packaged and IAM-scripted but not yet
+  deployed — see the honest status in "Which AWS service, for what". Deploying it
+  means agents that spawn on demand, from the cloud, and sit at the same table as the
+  local ones.
+- **Team chat as claimable shared state.** Directed agent-to-agent messages as rows in
+  the same database, claimed like any other resource — "messages without a message
+  protocol" (see "Why shared state, and not a protocol"). Chat that crosses machine
+  boundaries because it lives where the leases live.
+
+Also on the list: per-agent authorization on the write path, decay tuning for trail
+strength, and closing the one open verification gap — a Bedrock quota increase, so the
+semantic-recall claim can finally be measured instead of only attempted.
+
 ## Provenance
 
 This repository was built by AI coding agents (Claude Code, working in parallel lanes
