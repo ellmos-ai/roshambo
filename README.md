@@ -32,6 +32,11 @@ is decided by a serializable transaction in CockroachDB.
 > expose credentials, only Roshambo's own coordination data. Deploy details:
 > `infra/deploy_demo_lambda.py`,
 > [`demo/README.md`](demo/README.md#deployed).
+>
+> **[Watch the field run →](https://github.com/ellmos-ai/roshambo-starmap)** 27 agents
+> from five vendors on two machines built an invented star chart under lease
+> discipline — 1,226 collisions, never two winners. The evidence repository includes a
+> playable replay of the whole run and a walk-in planetarium.
 
 ![Roshambo demo web app: a dark-themed dashboard showing Swarm ID, agent/claim/trail counters, an Active Claims table with one lease held by mcp-agent, a Turned Away table showing two other agents told who holds the resource and what they are doing, and a Recall Search box](docs/screenshots/01-collision.png)
 
