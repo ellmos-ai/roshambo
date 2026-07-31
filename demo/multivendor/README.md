@@ -159,9 +159,11 @@ Three `BotAgent A/B/C` instances register under their own identity and claim
 against *each other only*, on a fresh auto-generated swarm (never the real field
 run's), for a few seconds. No files, no project, no other participants -- a pure
 coordination check. It prints a summary and exits non-zero if it ever found two
-simultaneous holders of the same task (expected: never). If you are evaluating
-this submission and want to see the core guarantee hold without waiting for a
-field run or holding any vendor credentials, this is the command.
+simultaneous holders of the same task (expected: never). What you need is any
+CockroachDB cluster (a free CockroachDB Cloud tier is enough) via `ROSHAMBO_DSN` —
+but no LLM key and no vendor credentials of any kind. If you are evaluating this
+submission and want to see the core guarantee hold without waiting for a field run,
+this is the command.
 
 ### Storm mode: extra contention alongside a real run
 
