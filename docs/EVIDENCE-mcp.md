@@ -99,3 +99,29 @@ session adds a genuine, verified **connection** to the Managed MCP Server — no
 and not fabricated — but not yet the "agent actually did something with our schema"
 evidence the submission needs. See `EINREICHUNG-ENTWURF.md`'s CockroachDB-tools table for
 how this is stated there.
+
+---
+
+## Addendum 2026-07-31 — the same connection now works end to end
+
+Everything above this line remains the verbatim record of 2026-07-30. Between that date
+and this one, the missing RBAC role for the service account was granted Console-side
+(not by any agent). On 2026-07-31 a fresh session against
+`https://cockroachlabs.cloud/mcp` (JSON-RPC / streamable HTTP, protocol 2025-03-26,
+server `cockroachdb-cloud v1.0.0`, scope `mcp:read`) completed with zero errors:
+
+1. `initialize` handshake
+2. `tools/call list_databases` → `defaultdb`, `roshambo`
+3. `tools/call get_table_schema` on `defaultdb.public.audit_log` → full CREATE TABLE
+4. `tools/call select_query` → the last 6 denied claims of swarm
+   `poc-starmap-2026-07-30` (real agent names, real timestamps)
+5. `tools/call select_query` → verb/allowed counts: claim denied **1245**, remember 111
+   — matching `collect_evidence.py` on the same cluster, row for row.
+
+Verbatim transcript and probe script: `_roshambo-assets/video/assets/poc/
+mcp_session_transcript.json` / `mcp_session_probe.py` (video production workspace,
+outside this repository). The session is scene 7 of the submission video.
+
+This upgrades the Managed MCP Server from "connected but unreadable" to **run and
+evidenced**, the third CockroachDB tool with that status (after Distributed Vector
+Indexing and Agent Skills, `docs/EVIDENCE-skills.md`).
