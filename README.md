@@ -43,6 +43,18 @@ is decided by a serializable transaction in CockroachDB.
 *The story in 2:58 — from lock-master's one-machine limit to a living star chart:
 [watch the video](https://youtu.be/dNOsgR965w4).*
 
+## Links
+
+| What | Link |
+|---|---|
+| DevPost entry | <https://devpost.com/software/roshambo-pvtfj8> |
+| Video (2:58) | <https://youtu.be/dNOsgR965w4> |
+| Evidence repo (MIT) | <https://github.com/ellmos-ai/roshambo-starmap> |
+| Live demo (AWS Lambda) | <https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/> |
+| Run replay (online) | <https://ellmos-ai.github.io/roshambo-starmap/replay/> |
+| Planetarium (online) | <https://ellmos-ai.github.io/roshambo-starmap/planetarium.html> |
+| lock-master (predecessor) | <https://github.com/dev-bricks/lock-master> |
+
 ![Roshambo demo web app: a dark-themed dashboard showing Swarm ID, agent/claim/trail counters, an Active Claims table with one lease held by mcp-agent, a Turned Away table showing two other agents told who holds the resource and what they are doing, and a Recall Search box](docs/screenshots/01-collision.png)
 
 ```mermaid
@@ -592,11 +604,12 @@ as features:
   [replay view](https://ellmos-ai.github.io/roshambo-starmap/replay/) built for the
   submission video turns any swarm's `audit_log` back into a watchable game; turning
   it from replay to live tracking is a projection change, not a schema change.
-- **Agents spawned from AWS.** `roshambo-worker` (the Lambda handler implementing
-  claim → recall → work → remember → release) is packaged and IAM-scripted but not yet
-  deployed — see the honest status in "Which AWS service, for what". Deploying it
-  means agents that spawn on demand, from the cloud, and sit at the same table as the
-  local ones.
+- **Agents spawned from AWS — building alongside, not just watching.**
+  `roshambo-worker` (the Lambda handler implementing claim → recall → work →
+  remember → release) is packaged and IAM-scripted but not yet deployed — see the
+  honest status in "Which AWS service, for what". Deploying it means a worker that
+  claims a task exactly like a local agent and takes part in the build itself —
+  an agent that spawns on demand, from the cloud, and sits at the same table.
 - **Team chat as claimable shared state.** Directed agent-to-agent messages as rows in
   the same database, claimed like any other resource — "messages without a message
   protocol" (see "Why shared state, and not a protocol"). Chat that crosses machine
