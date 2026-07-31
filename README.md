@@ -38,6 +38,11 @@ is decided by a serializable transaction in CockroachDB.
 > discipline — 1,226 collisions, never two winners. The evidence repository includes a
 > playable replay of the whole run and a walk-in planetarium.
 
+[![Roshambo — the video: many agents throw, only one can win](assets/roshambo-video-thumbnail.png)](https://youtu.be/dNOsgR965w4)
+
+*The story in 2:58 — from lock-master's one-machine limit to a living star chart:
+[watch the video](https://youtu.be/dNOsgR965w4).*
+
 ![Roshambo demo web app: a dark-themed dashboard showing Swarm ID, agent/claim/trail counters, an Active Claims table with one lease held by mcp-agent, a Turned Away table showing two other agents told who holds the resource and what they are doing, and a Recall Search box](docs/screenshots/01-collision.png)
 
 ```mermaid
