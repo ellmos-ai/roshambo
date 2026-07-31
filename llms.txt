@@ -2,7 +2,7 @@
 
 > Roshambo is a multi-agent coordinator built on CockroachDB and AWS Bedrock: serializable leases so two agents never claim the same work, and a distributed vector index so an agent can recall earlier attempts and outcomes before starting.
 
-Last-checked: 2026-07-30
+Last-checked: 2026-07-31
 Verification: 127 passed, 51 skipped (178 total pytest tests verified)
 Live demo: https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/ (AWS Lambda Function URL, eu-central-1, check /api/health for "mode":"live")
 
@@ -89,6 +89,14 @@ Measured runs, not claims. Each file records what was executed and what was not:
   plus a deterministic renderer, so every commit can be re-rendered into a time-lapse frame
   (`demo/multivendor/starmap-run/frames/`). Both runs' duplicated tasks trace to a lease set
   shorter than the work, diagnosed by an agent in its own failure trail.
+- `docs/EVIDENCE-defects.md`: the two-machine field run (`poc-starmap-2026-07-30`) —
+  27 agents from 5 vendors plus scripted bots on two machines, coordinated through one
+  CockroachDB Cloud cluster. 4011 audit rows, 1226 genuine collisions (915 events), 147
+  of them cross-host (94 events), 1245 of 1245 denials naming the actual holder, 16
+  stale denials. The detector's 3 "two live leases" flags are resolved there as
+  audit-order artefacts of a slow winning claim, not overlapping leases: **no resource
+  was ever held by two agents at once.** The artefact is a second, invented night sky,
+  built in its own evidence repository (`ellmos-ai/roshambo-starmap`).
 - `docs/EVIDENCE-core.md`, `docs/EVIDENCE-aws.md`, `docs/EVIDENCE-iface.md`: per-lane runs.
 - `docs/EVIDENCE-bedrock.md`: the real Bedrock path specifically. One genuine
   `InvokeModel` call against `amazon.titan-embed-text-v2:0` (region `us-east-2`)
@@ -101,7 +109,7 @@ Measured runs, not claims. Each file records what was executed and what was not:
 Deployed and invoked for real: the demo web app, as a public AWS Lambda Function URL
 (see "Live demo" above and `demo/README.md`). Not yet exercised: the `roshambo-worker`
 Lambda function itself (packaged, IAM role scripted, never deployed), S3 artifacts,
-`decide` from the CLI, coordination across more than one machine, and -- despite the one
+`decide` from the CLI, and -- despite the one
 successful Bedrock call above -- semantic recall end to end (see `docs/EVIDENCE-bedrock.md`).
 `recall()` is therefore not described as semantic anywhere in this repository; its only
 evidenced retrieval quality is lexical (word/character-trigram overlap).
