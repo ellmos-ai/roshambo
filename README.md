@@ -38,17 +38,17 @@ is decided by a serializable transaction in CockroachDB.
 > discipline — 1,226 collisions, never two winners. The evidence repository includes a
 > playable replay of the whole run and a walk-in planetarium.
 
-[![Roshambo — the video: many agents throw, only one can win](assets/roshambo-video-thumbnail.png)](https://youtu.be/dNOsgR965w4)
+[![Roshambo — the video: many agents throw, only one can win](assets/roshambo-video-thumbnail.png)](https://youtu.be/m8VzkPrJWHI)
 
 *The story in 2:58 — from lock-master's one-machine limit to a living star chart:
-[watch the video](https://youtu.be/dNOsgR965w4).*
+[watch the video](https://youtu.be/m8VzkPrJWHI).*
 
 ## Links
 
 | What | Link |
 |---|---|
 | DevPost entry | <https://devpost.com/software/roshambo-pvtfj8> |
-| Video (2:58) | <https://youtu.be/dNOsgR965w4> |
+| Video (2:58) | <https://youtu.be/m8VzkPrJWHI> |
 | Evidence repo (MIT) | <https://github.com/ellmos-ai/roshambo-starmap> |
 | Live demo (AWS Lambda) | <https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/> |
 | Run replay (online) | <https://ellmos-ai.github.io/roshambo-starmap/replay/> |
