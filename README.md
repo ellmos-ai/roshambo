@@ -1,6 +1,6 @@
 # Roshambo
 
-[![Tests](https://img.shields.io/badge/Tests-127%20passed%20%7C%2051%20skipped-success.svg)](https://github.com/ellmos-ai/roshambo)
+[![Tests](https://img.shields.io/badge/Tests-140%20passed%20%7C%2051%20skipped-success.svg)](https://github.com/ellmos-ai/roshambo)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](pyproject.toml)
 [![Ecosystem](https://img.shields.io/badge/ellmos--ai-framework-blue.svg)](https://github.com/ellmos-ai)
 [![Umbrella](https://img.shields.io/badge/open--bricks-umbrella-teal.svg)](https://github.com/open-bricks)
@@ -263,6 +263,11 @@ claim anywhere in this README:
 - Core data model, leases, recall: [`docs/EVIDENCE-core.md`](docs/EVIDENCE-core.md)
 - AWS integration (Bedrock, Lambda, S3): [`docs/EVIDENCE-aws.md`](docs/EVIDENCE-aws.md)
 - MCP server and Agent Skills: [`docs/EVIDENCE-iface.md`](docs/EVIDENCE-iface.md)
+- The two-machine field run and its analysis:
+  [`docs/EVIDENCE-multivendor.md`](docs/EVIDENCE-multivendor.md),
+  [`docs/EVIDENCE-defects.md`](docs/EVIDENCE-defects.md),
+  [`docs/EVIDENCE-skills.md`](docs/EVIDENCE-skills.md),
+  [`docs/EVIDENCE-mcp.md`](docs/EVIDENCE-mcp.md)
 
 Implemented in this repository, with tests:
 
