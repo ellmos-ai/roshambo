@@ -210,10 +210,10 @@ flowchart TB
     end
 
     subgraph AWS["AWS"]
-        L["AWS Lambda<br/>roshambo-worker"]
+        L["AWS Lambda<br/>roshambo-worker (packaged)"]
+        D["AWS Lambda<br/>demo web app (Function URL, live)"]
         B["Amazon Bedrock<br/>Titan embed v2 + Claude"]
         S3["Amazon S3<br/>artifacts, large payloads"]
-        FG["ECS Fargate<br/>demo web app"]
     end
 
     subgraph CRDB["CockroachDB Cloud (system of record)"]
@@ -237,7 +237,7 @@ flowchart TB
     L --> B
     L --> S3
     MCPC --> B
-    FG --> CRDB
+    D --> CRDB
     T2 -. "artifact_uri" .-> S3
 ```
 
@@ -472,9 +472,9 @@ and to say what the agent actually did with them:
 | AWS service | How Roshambo uses it | Where in this repository |
 |---|---|---|
 | **Amazon Bedrock** | Titan Text Embeddings V2 (1024-dim) is the code path for embedding every trail and fact before it is written to CockroachDB; an offline, explicitly-non-semantic embedder stands in whenever Bedrock access is unavailable (no credentials, or, as currently the case, no usable on-demand quota — see [`docs/EVIDENCE-bedrock.md`](docs/EVIDENCE-bedrock.md)), so the rest of the system still runs | `src/roshambo/embeddings.py` |
-| **AWS Lambda** | `roshambo-worker`: an autonomous handler that claims a resource, checks memory, does one unit of work, and writes back what happened — the "agents spawn autonomously and write constantly" half of the brief | `src/roshambo/aws/worker.py` |
+| **AWS Lambda** | `roshambo-worker`: an autonomous handler that claims a resource, checks memory, does one unit of work, and writes back what happened — the "agents spawn autonomously and write constantly" half of the brief. The demo web application also runs on Lambda, behind a public Function URL in `eu-central-1` (deployed, live — see [Status](#status)) | `src/roshambo/aws/worker.py`, `demo/` |
 | **Amazon S3** | Large trail/fact payloads are stored by `s3://` reference (`artifact_uri`) instead of inline in CockroachDB rows | `src/roshambo/aws/s3.py` |
-| **Amazon ECS Fargate** *(optional)* | Planned hosting for the demo web application | `demo/` (see [Status](#status)) |
+| **Amazon ECS Fargate** *(optional)* | Alternative hosting option for the demo web application (it currently runs on Lambda, see above) | `demo/` (see [Status](#status)) |
 
 ## Security: no free-form SQL, on purpose
 
