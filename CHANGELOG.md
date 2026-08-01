@@ -7,6 +7,28 @@ tagged git release (no `git tag`); the `[x.y.z]` headings below track `pyproject
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-08-01
+
+### Fixed
+
+- CI was red on every push since 2026-07-31 (10 consecutive runs on `main`, both the
+  `lint (ruff)` and `test (no infra)` jobs), unnoticed because the submission deadline
+  had passed and nobody was watching Actions. Two independent causes, both closed:
+  - `mcp` was pinned as `mcp>=1.2` with no upper bound. `mcp` 2.0.0 (released
+    2026-07-31) removed the `mcp.server.fastmcp.exceptions` module path that
+    `tests/test_mcp_server.py` imports, so a fresh CI install picked up 2.0.0 and
+    `pytest` failed at collection with `ModuleNotFoundError`, aborting the whole run
+    (all three Python-version jobs, not just the MCP tests). Pinned to `mcp>=1.2,<2`
+    in both `[project.optional-dependencies]` and `dev`, matching the 1.28.1 this
+    project's suite is actually verified against; `src/roshambo/mcp/**`'s own
+    2.x-compatibility is untouched and still open (noted in the pin's comment).
+  - `ruff check .` failed with 28 findings (25 `E501` line-too-long, 3 `I001`
+    unsorted-imports) in `demo/multivendor/bot_agent.py`, `demo/multivendor/run_field.py`,
+    `demo/queries.py`, and `tests/test_bot_agent.py` -- files this project maintains
+    (not the frozen `demo/multivendor/{fieldkit,starmap}-run/` field-run transcripts,
+    which stay excluded on purpose). Reformatted only; no behaviour change. Offline
+    suite still 140 passed / 51 skipped, `ruff check .` now clean.
+
 ## [0.1.7] - 2026-07-30
 
 ### Verified

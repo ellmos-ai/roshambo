@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roshambo"
-version = "0.1.7"
+version = "0.1.8"
 description = "Agentic memory fabric on CockroachDB: serializable leases and a distributed vector index, so agent swarms remember what was tried and how it ended."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,13 +27,18 @@ dependencies = [
 
 [project.optional-dependencies]
 aws = ["boto3>=1.35"]
-mcp = ["mcp>=1.2"]
+# Upper-bounded below <2: mcp 2.0.0 (released 2026-07-31) dropped the
+# `mcp.server.fastmcp.exceptions` module path this project's server (src/roshambo/mcp/server.py)
+# and its tests (tests/test_mcp_server.py) import, breaking collection outright rather than
+# failing individual tests. Verified against 1.28.1 (the version this repo's test suite and CI
+# were last green against); revisit the pin once src/roshambo/mcp/** is migrated to the 2.x API.
+mcp = ["mcp>=1.2,<2"]
 dev = [
     "pytest>=8.0",
     "pytest-timeout>=2.3",
     "ruff>=0.6",
     "boto3>=1.35",
-    "mcp>=1.2",
+    "mcp>=1.2,<2",
 ]
 
 [project.scripts]

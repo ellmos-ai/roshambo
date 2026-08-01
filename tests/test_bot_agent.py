@@ -25,10 +25,9 @@ for p in (SRC, DEMO_DIR):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-from roshambo.models import Claim, ClaimDenied  # noqa: E402
-
 import bot_agent  # noqa: E402
 
+from roshambo.models import Claim, ClaimDenied  # noqa: E402
 
 # --------------------------------------------------------------------------- naming
 
@@ -74,7 +73,12 @@ def test_build_identities_produces_distinct_collision_free_ids():
 
 
 def test_aimd_denial_increases_interval_multiplicatively():
-    rate = bot_agent.AimdRate(interval=1.0, min_interval=0.1, max_interval=100.0, backoff_factor=2.0)
+    rate = bot_agent.AimdRate(
+        interval=1.0,
+        min_interval=0.1,
+        max_interval=100.0,
+        backoff_factor=2.0,
+    )
     rate.on_denied()
     assert rate.interval == pytest.approx(2.0)
     rate.on_denied()
@@ -82,7 +86,12 @@ def test_aimd_denial_increases_interval_multiplicatively():
 
 
 def test_aimd_grant_decreases_interval_multiplicatively():
-    rate = bot_agent.AimdRate(interval=10.0, min_interval=0.1, max_interval=100.0, boldness_factor=0.5)
+    rate = bot_agent.AimdRate(
+        interval=10.0,
+        min_interval=0.1,
+        max_interval=100.0,
+        boldness_factor=0.5,
+    )
     rate.on_granted()
     assert rate.interval == pytest.approx(5.0)
     rate.on_granted()
@@ -97,7 +106,12 @@ def test_aimd_interval_clamped_to_max_on_repeated_denial():
 
 
 def test_aimd_interval_clamped_to_min_on_repeated_grant():
-    rate = bot_agent.AimdRate(interval=1.0, min_interval=0.2, max_interval=100.0, boldness_factor=0.5)
+    rate = bot_agent.AimdRate(
+        interval=1.0,
+        min_interval=0.2,
+        max_interval=100.0,
+        boldness_factor=0.5,
+    )
     for _ in range(10):
         rate.on_granted()
     assert rate.interval == pytest.approx(0.2)
@@ -156,7 +170,12 @@ def test_validate_args_rejects_plan_over_max_attempts_total():
 
 def test_validate_args_override_permits_over_budget_plan():
     bot_agent._validate_args(
-        _args(bots=100, max_attempts_per_bot=100, max_attempts_total=300, i_have_checked_the_ru_budget=True)
+        _args(
+            bots=100,
+            max_attempts_per_bot=100,
+            max_attempts_total=300,
+            i_have_checked_the_ru_budget=True,
+        )
     )
 
 
@@ -201,7 +220,11 @@ class _FakeStore:
 
     def register_agent(self, framework, host, capabilities, agent_id):
         with self.lock:
-            self.registered[agent_id] = {"framework": framework, "host": host, "capabilities": capabilities}
+            self.registered[agent_id] = {
+                "framework": framework,
+                "host": host,
+                "capabilities": capabilities,
+            }
         return agent_id
 
     def claim(self, resource, agent_id, intent, ttl):
@@ -276,7 +299,15 @@ class _RaisingHoldClient(_FakeClient):
 # ---------------------------------------------------------------------- bot_loop
 
 
-def _run_one_bot(store, identity, tasks, max_attempts=5, hold_seconds=0.01, ttl=30, client_cls=_FakeClient):
+def _run_one_bot(
+    store,
+    identity,
+    tasks,
+    max_attempts=5,
+    hold_seconds=0.01,
+    ttl=30,
+    client_cls=_FakeClient,
+):
     report = bot_agent.BotReport(identity=identity)
     rate = bot_agent.AimdRate(interval=0.01, min_interval=0.005, max_interval=1.0)
     stop_event = threading.Event()

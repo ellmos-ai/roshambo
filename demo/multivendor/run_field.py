@@ -184,6 +184,7 @@ def annotate_display_names(
     """
     try:
         from rsb import resolve_dsn
+
         from roshambo.config import RoshamboConfig
         from roshambo.memory import PlaceholderEmbedder, Roshambo
 

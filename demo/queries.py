@@ -70,7 +70,16 @@ def active_claims(cfg: RoshamboConfig) -> list[dict]:
             "host": host,
             "display_name": display_name,
         }
-        for resource, agent_id, intent, acquired_at, expires_at, framework, host, display_name in rows
+        for (
+            resource,
+            agent_id,
+            intent,
+            acquired_at,
+            expires_at,
+            framework,
+            host,
+            display_name,
+        ) in rows
     ]
 
 

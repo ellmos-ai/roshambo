@@ -294,7 +294,9 @@ class RunReport:
                     "granted": len(b.granted),
                     "denied": len(b.denied),
                     "errored": len(b.errored),
-                    "final_interval": b.interval_events[-1].interval_after if b.interval_events else None,
+                    "final_interval": (
+                        b.interval_events[-1].interval_after if b.interval_events else None
+                    ),
                 }
                 for b in self.bots
             ],
@@ -348,7 +350,9 @@ def _finalize(report: RunReport) -> RunReport:
             if a.held_from is None or a.held_until is None:
                 report.unreleased_claims.append((a.agent_id, a.claim_id or "?"))
                 continue
-            by_resource.setdefault(a.resource, []).append((a.claim_id or "?", a.held_from, a.held_until))
+            by_resource.setdefault(a.resource, []).append(
+                (a.claim_id or "?", a.held_from, a.held_until)
+            )
 
     for resource, windows in by_resource.items():
         for i in range(len(windows)):
@@ -444,7 +448,10 @@ def bot_loop(
             try:
                 attempt_started = time.perf_counter()
                 result = client.claim(
-                    resource, identity.agent_id, f"{identity.display_name} contention probe", ttl_seconds
+                    resource,
+                    identity.agent_id,
+                    f"{identity.display_name} contention probe",
+                    ttl_seconds,
                 )
                 # Captured the instant claim() *returns* -- the server had already
                 # committed the grant by then, so this excludes the request's own
@@ -498,7 +505,10 @@ def bot_loop(
                         error=str(exc),
                     )
                 )
-                print(f"[{identity.display_name}] attempt error (continuing): {exc}", file=sys.stderr)
+                print(
+                    f"[{identity.display_name}] attempt error (continuing): {exc}",
+                    file=sys.stderr,
+                )
 
             attempts += 1
             if attempts < max_attempts and time.monotonic() < deadline:
@@ -520,9 +530,11 @@ def _real_client_factory(cfg):
 
 
 def _load_cfg(swarm_id: str, ttl_seconds: int):
-    from rsb import resolve_dsn  # local import: rsb.py lives next to this script
-    from roshambo.config import RoshamboConfig
     import os
+
+    from rsb import resolve_dsn  # local import: rsb.py lives next to this script
+
+    from roshambo.config import RoshamboConfig
 
     dsn = resolve_dsn(dict(os.environ))
     return RoshamboConfig(dsn=dsn, swarm_id=swarm_id, lease_ttl_seconds=ttl_seconds)
@@ -628,7 +640,14 @@ def build_identities(bots: int, host_label: str) -> list[BotIdentity]:
 def build_tasks(args: argparse.Namespace) -> tuple[str, ...]:
     if args.tasks:
         return tuple(t.strip() for t in args.tasks.split(",") if t.strip())
-    prefix = args.task_prefix or (DEFAULT_DRY_RUN_TASK_PREFIX if args.dry_run else DEFAULT_TASK_PREFIX)
+    prefix = (
+        args.task_prefix
+        or (
+            DEFAULT_DRY_RUN_TASK_PREFIX
+            if args.dry_run
+            else DEFAULT_TASK_PREFIX
+        )
+    )
     return tuple(f"{prefix}{i:02d}" for i in range(1, args.task_count + 1))
 
 
@@ -708,16 +727,37 @@ def build_parser() -> argparse.ArgumentParser:
             "for --dry-run (a fresh 'bot-dryrun-<timestamp>' swarm is used if omitted)."
         ),
     )
-    parser.add_argument("--bots", type=int, default=DEFAULT_BOTS, help="number of parallel BotAgent instances")
+    parser.add_argument(
+        "--bots",
+        type=int,
+        default=DEFAULT_BOTS,
+        help="number of parallel BotAgent instances",
+    )
     parser.add_argument(
         "--host-label",
         default=None,
-        help="stable label for this machine, used in every bot's agent id (default: local hostname)",
+        help=(
+            "stable label for this machine, used in every bot's agent id "
+            "(default: local hostname)"
+        ),
     )
-    parser.add_argument("--tasks", default=None, help="comma-separated resource names (overrides --task-prefix/-count)")
-    parser.add_argument("--task-prefix", default=None, help="default: 'dryrun:task:' in --dry-run, else 'storm:task:'")
+    parser.add_argument(
+        "--tasks",
+        default=None,
+        help="comma-separated resource names (overrides --task-prefix/-count)",
+    )
+    parser.add_argument(
+        "--task-prefix",
+        default=None,
+        help="default: 'dryrun:task:' in --dry-run, else 'storm:task:'",
+    )
     parser.add_argument("--task-count", type=int, default=DEFAULT_TASK_COUNT)
-    parser.add_argument("--ttl", type=int, default=DEFAULT_TTL_SECONDS, help="lease seconds per claim")
+    parser.add_argument(
+        "--ttl",
+        type=int,
+        default=DEFAULT_TTL_SECONDS,
+        help="lease seconds per claim",
+    )
     parser.add_argument(
         "--hold-seconds",
         type=float,
@@ -727,18 +767,39 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--start-interval", type=float, default=DEFAULT_START_INTERVAL)
     parser.add_argument("--min-interval", type=float, default=DEFAULT_MIN_INTERVAL)
     parser.add_argument("--max-interval", type=float, default=DEFAULT_MAX_INTERVAL)
-    parser.add_argument("--backoff-factor", type=float, default=DEFAULT_BACKOFF_FACTOR, help="interval *= this on denial")
-    parser.add_argument("--boldness-factor", type=float, default=DEFAULT_BOLDNESS_FACTOR, help="interval *= this on grant")
+    parser.add_argument(
+        "--backoff-factor",
+        type=float,
+        default=DEFAULT_BACKOFF_FACTOR,
+        help="interval *= this on denial",
+    )
+    parser.add_argument(
+        "--boldness-factor",
+        type=float,
+        default=DEFAULT_BOLDNESS_FACTOR,
+        help="interval *= this on grant",
+    )
     parser.add_argument("--max-attempts-per-bot", type=int, default=None)
     parser.add_argument("--max-attempts-total", type=int, default=DEFAULT_MAX_ATTEMPTS_TOTAL)
     parser.add_argument("--time-limit", type=int, default=None, help="wall-clock seconds, hard cap")
     parser.add_argument(
         "--i-have-checked-the-ru-budget",
         action="store_true",
-        help="required to exceed --max-attempts-total, or to --dry-run against the protected swarm",
+        help=(
+            "required to exceed --max-attempts-total, or to --dry-run against "
+            "the protected swarm"
+        ),
     )
-    parser.add_argument("--log-interval-csv", default=None, help="write the (timestamp, interval, outcome) log here")
-    parser.add_argument("--json", action="store_true", help="also print the final report as JSON on stdout")
+    parser.add_argument(
+        "--log-interval-csv",
+        default=None,
+        help="write the (timestamp, interval, outcome) log here",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="also print the final report as JSON on stdout",
+    )
     return parser
 
 
@@ -749,7 +810,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_attempts_per_bot is None:
         args.max_attempts_per_bot = 10 if args.dry_run else DEFAULT_MAX_ATTEMPTS_PER_BOT
     if args.time_limit is None:
-        args.time_limit = DEFAULT_DRY_RUN_TIME_LIMIT_SECONDS if args.dry_run else DEFAULT_TIME_LIMIT_SECONDS
+        args.time_limit = (
+            DEFAULT_DRY_RUN_TIME_LIMIT_SECONDS
+            if args.dry_run
+            else DEFAULT_TIME_LIMIT_SECONDS
+        )
     if args.swarm is None:
         if not args.dry_run:
             parser.error("--swarm is required outside --dry-run")
@@ -794,7 +859,10 @@ def main(argv: list[str] | None = None) -> int:
     stop_event = threading.Event()
 
     def _handle_sigint(_signum, _frame):
-        print("\nbot_agent.py: interrupted -- signalling bots to finish releasing and stop", file=sys.stderr)
+        print(
+            "\nbot_agent.py: interrupted -- signalling bots to finish releasing and stop",
+            file=sys.stderr,
+        )
         stop_event.set()
 
     import signal
@@ -834,10 +902,28 @@ def _write_interval_csv(report: RunReport, path: Path) -> None:
 
     with path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh)
-        writer.writerow(["timestamp", "agent_id", "resource", "outcome", "interval_before", "interval_after"])
+        writer.writerow(
+            [
+                "timestamp",
+                "agent_id",
+                "resource",
+                "outcome",
+                "interval_before",
+                "interval_after",
+            ]
+        )
         for bot in report.bots:
             for e in bot.interval_events:
-                writer.writerow([e.timestamp, e.agent_id, e.resource, e.outcome, e.interval_before, e.interval_after])
+                writer.writerow(
+                    [
+                        e.timestamp,
+                        e.agent_id,
+                        e.resource,
+                        e.outcome,
+                        e.interval_before,
+                        e.interval_after,
+                    ]
+                )
 
 
 if __name__ == "__main__":
