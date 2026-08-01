@@ -327,10 +327,6 @@ Deployed and reachable, not just packaged:
   `infra/deploy_demo_lambda.py`; what is and isn't verified about the deployment itself:
   [`demo/README.md`](demo/README.md#deployed).
 
-Not yet started as of this writing:
-
-- The submission video
-
 ## Quickstart
 
 Requires Python >= 3.10 and a reachable CockroachDB cluster (a local `cockroach demo`

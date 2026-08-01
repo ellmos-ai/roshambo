@@ -308,10 +308,6 @@ Deployed und erreichbar, nicht nur paketiert:
   Cluster. Deploy-Werkzeug: `infra/deploy_demo_lambda.py`; was am Deployment selbst
   verifiziert ist und was nicht: [`demo/README.md`](demo/README.md#deployed).
 
-Zum Zeitpunkt dieses Schreibens noch nicht begonnen:
-
-- Das Einreichungsvideo
-
 ## Schnellstart
 
 Erfordert Python >= 3.10 und einen erreichbaren CockroachDB-Cluster (eine lokale
