@@ -7,6 +7,17 @@ tagged git release (no `git tag`); the `[x.y.z]` headings below track `pyproject
 
 ## [Unreleased]
 
+### Documentation
+
+- Clarified agent lock readback: the historical instruction to read a mandatory root
+  `LOCK.txt` now distinguishes absent repository lock files from TaskPLAN/Lockmaster
+  assignment and lane ownership. Operators must inventory locks and certify foreign work
+  before mutation; a missing `LOCK.txt` is not reset authorization.
+- Synchronized the active README status with the verified submission state by
+  fast-forwarding to `origin/main` commit `f2e6960`, where the stale
+  "submission video not started" lines were removed from both language variants. The
+  old 0.1.0 changelog gap remains a dated historical entry, not current status.
+
 ## [0.1.8] - 2026-08-01
 
 ### Fixed

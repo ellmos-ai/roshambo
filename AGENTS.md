@@ -4,8 +4,13 @@
 
 - AWS tooling configured for this workstation is scoped to this repository.
   Do not use it for another project unless the user explicitly expands the scope.
-- Before changing Roshambo, read `README.md`, `CONTRACT.md`, `LOCK.txt`,
-  `docs/HANDOFF.md`, `docs/NEXT-RUN.md`, and the relevant evidence file.
+- Before changing Roshambo, read `README.md`, `CONTRACT.md`, `docs/HANDOFF.md`,
+  `docs/NEXT-RUN.md`, and the relevant evidence file.
+- Lock readback is explicit: first inventory active repository locks (`LOCK*.txt`) at
+  the repository root. As of 2026-08-01 there is no mandatory root `LOCK.txt` in this
+  clone. A missing `LOCK.txt` is therefore not a license to reset or overwrite work.
+  Treat TaskPLAN/Lockmaster task assignment, repository lock files, and lane ownership
+  as separate signals; certify foreign work before mutation.
 - Respect the ownership boundaries in `CONTRACT.md`. If a required edit belongs
   to another lane, record the request in `docs/HANDOFF.md`.
 - Preserve unrelated changes. Do not commit unless the current project rules or
