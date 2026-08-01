@@ -11,7 +11,7 @@
 
 **[English version / Englische Fassung: README.md](README.md)**
 
-![Roshambo-Symbol: ein türkises Dreieck, verbunden oberhalb eines grauen Kreises und eines grauen Quadrats auf dunklem Grund, zusammenlaufend auf einen Punkt — eine Form abgesetzt als Gewinner](assets/roshambo-banner-v2.png)
+![Roshambo-Banner: leuchtend grüne Faust mit Schere-Stein-Papier Hand-Icons und Slogan Many agents throw. Only one can win.](assets/roshambo-banner-original.svg)
 
 > [!NOTE]
 > **KI-Agenten-Integration & LLM-Entdeckbarkeit**: Roshambo bietet eine nativ integrierte MCP-Schnittstelle (`roshambo-mcp`) und strukturierte Speicherinterfaces. Siehe [`llms.txt`](llms.txt) für maschinenlesbaren Kontext, Architekturdetails und Prüfspezifikationen.

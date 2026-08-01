@@ -11,7 +11,7 @@
 
 **[Deutsche Fassung / German version: README_de.md](README_de.md)**
 
-![Roshambo mark: a teal triangle connected above a grey circle and a grey square on a dark background, converging on one point — one shape set apart as the winner](assets/roshambo-banner-v2.png)
+![Roshambo banner: glowing green fist with rock-paper-scissors hand icons and tagline Many agents throw. Only one can win.](assets/roshambo-banner-original.svg)
 
 > [!NOTE]
 > **AI Agent Integration & LLM Discovery**: Roshambo provides native MCP integration (`roshambo-mcp`) and structured memory interfaces. Read [`llms.txt`](llms.txt) for machine-readable context, architectural details, and verification specifications.

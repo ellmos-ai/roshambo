@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Radial Gradient matching gallery.jpg -->
+    <radialGradient id="bgGlow" cx="30%" cy="35%" r="75%" fx="25%" fy="30%">
+      <stop offset="0%" stop-color="#0c2d1b" />
+      <stop offset="35%" stop-color="#06190f" />
+      <stop offset="70%" stop-color="#030c07" />
+      <stop offset="100%" stop-color="#010503" />
+    </radialGradient>
+
+    <!-- Neon Green Glow Filter for Fist -->
+    <filter id="fistGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="16" result="blur1" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur3" />
+      <feColorMatrix type="matrix" values="
+        0 0 0 0 0.0
+        0 0 0 0 1.0
+        0 0 0 0 0.46
+        0 0 0 1.0 0" in="blur1" result="greenBlur" />
+      <feMerge>
+        <feMergeNode in="greenBlur" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur3" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Glow Filter for Constellation Nodes -->
+    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark Emerald / Black Background -->
+  <rect width="1200" height="630" fill="url(#bgGlow)" />
+
+  <!-- Constellation / Network Mesh Lines (Subtle Green Net) -->
+  <g stroke="#00e676" stroke-width="1.2" opacity="0.18">
+    <line x1="50" y1="570" x2="75" y2="140" />
+    <line x1="75" y1="140" x2="500" y2="50" />
+    <line x1="75" y1="140" x2="530" y2="290" />
+    <line x1="500" y1="50" x2="750" y2="110" />
+    <line x1="750" y1="110" x2="980" y2="175" />
+    <line x1="980" y1="175" x2="1080" y2="490" />
+    <line x1="750" y1="110" x2="530" y2="290" />
+    <line x1="530" y1="290" x2="715" y2="525" />
+    <line x1="715" y1="525" x2="1080" y2="490" />
+    <line x1="715" y1="525" x2="280" y2="580" />
+    <line x1="280" y1="580" x2="50" y2="570" />
+    <line x1="50" y1="570" x2="530" y2="290" />
+    <line x1="980" y1="175" x2="715" y2="525" />
+    <line x1="500" y1="50" x2="980" y2="175" />
+  </g>
+
+  <!-- Constellation Nodes (Glowing Green Dots) -->
+  <g filter="url(#nodeGlow)">
+    <circle cx="75" cy="140" r="4.5" fill="#00ff75" opacity="0.85" />
+    <circle cx="500" cy="50" r="3.5" fill="#00ff75" opacity="0.75" />
+    <circle cx="750" cy="110" r="5" fill="#00ff75" opacity="0.9" />
+    <circle cx="980" cy="175" r="4.5" fill="#00ff75" opacity="0.85" />
+    <circle cx="1080" cy="490" r="5.5" fill="#00ff75" opacity="0.95" />
+    <circle cx="715" cy="525" r="4" fill="#00ff75" opacity="0.8" />
+    <circle cx="50" cy="570" r="4" fill="#00ff75" opacity="0.8" />
+    <circle cx="280" cy="580" r="3" fill="#00ff75" opacity="0.7" />
+  </g>
+
+  <!-- Node Inner White Pinpoint Cores -->
+  <g fill="#ffffff" opacity="0.95">
+    <circle cx="75" cy="140" r="1.8" />
+    <circle cx="500" cy="50" r="1.5" />
+    <circle cx="750" cy="110" r="2.0" />
+    <circle cx="980" cy="175" r="1.8" />
+    <circle cx="1080" cy="490" r="2.2" />
+    <circle cx="715" cy="525" r="1.6" />
+    <circle cx="50" cy="570" r="1.6" />
+  </g>
+
+  <!-- LEFT SIDE HAND ICONS GROUP -->
+
+  <!-- 1. GLOWING NEON GREEN FIST (ROCK / STEIN) TOP-LEFT -->
+  <g filter="url(#fistGlow)">
+    <!-- Base Palm & Wrist Fill -->
+    <path d="M 235,190 L 362,190 C 372,190 380,198 380,208 L 380,230 C 380,255 360,275 335,275 L 265,275 C 240,275 220,255 220,230 L 220,205 Z" fill="#00ff75" />
+
+    <!-- 4 Vertical Rounded Fingers at Top -->
+    <rect x="235" y="148" width="28" height="60" rx="14" fill="#00ff75" />
+    <rect x="268" y="134" width="28" height="74" rx="14" fill="#00ff75" />
+    <rect x="301" y="134" width="28" height="74" rx="14" fill="#00ff75" />
+    <rect x="334" y="142" width="28" height="66" rx="14" fill="#00ff75" />
+
+    <!-- Folded Horizontal Thumb Across Front -->
+    <path d="M 235,195 L 340,195 C 352,195 362,205 362,217 C 362,229 352,239 340,239 L 260,239 C 246,239 235,228 235,214 Z" fill="#00ff75" />
+
+    <!-- Dark Seam Lines for Icon Definition (matching gallery.jpg) -->
+    <g stroke="#04160c" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.95">
+      <line x1="265" y1="148" x2="265" y2="192" />
+      <line x1="298" y1="134" x2="298" y2="192" />
+      <line x1="331" y1="142" x2="331" y2="192" />
+      <path d="M 235,195 L 340,195 C 352,195 362,205 362,217 C 362,229 352,239 340,239 L 260,239 C 246,239 235,228 235,214 Z" fill="none" />
+      <path d="M 265,217 C 285,225 315,225 330,217" fill="none" />
+    </g>
+  </g>
+
+  <!-- 2. SCISSORS HAND ICON (OUTLINE) LOWER-LEFT (LEFT) -->
+  <g transform="translate(10, 0)">
+    <!-- Translucent Background Fill inside Scissors -->
+    <path d="M 195,430 L 225,325 C 230,318 245,322 240,335 L 222,430 L 280,350 C 288,340 300,350 292,362 L 235,445 C 235,445 220,470 205,480 C 190,490 170,470 180,450 Z" 
+          fill="#131f18" fill-opacity="0.45" />
+
+    <!-- Scissors Outline (Gray V-Sign Hand) -->
+    <g stroke="#4a5750" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <!-- Index Finger extended up-right -->
+      <path d="M 195,430 L 225,325 C 230,315 244,318 240,332 L 220,432" />
+      <!-- Middle Finger extended up-right (V-shape) -->
+      <path d="M 220,430 L 280,350 C 288,340 300,350 292,362 L 235,445" />
+      <!-- Ring & Pinky Fingers folded in palm -->
+      <path d="M 195,430 C 180,420 165,435 160,452 C 155,470 165,485 180,490" />
+      <!-- Thumb folded over ring finger -->
+      <path d="M 180,450 C 195,445 210,455 205,472 C 200,488 185,492 175,490" />
+      <!-- Wrist Base -->
+      <path d="M 172,492 L 165,530 M 205,485 L 212,530" />
+    </g>
+  </g>
+
+  <!-- 3. PAPER HAND ICON (SOLID FILLED SLIGHT TRANSPARENT) LOWER-LEFT (RIGHT) -->
+  <g stroke="#4a5750" stroke-width="2" stroke-opacity="0.4">
+    <!-- Main Open Hand Body & Fingers -->
+    <!-- Thumb (left) -->
+    <path d="M 350,430 C 332,412 325,392 340,380 C 352,370 368,382 375,400 L 382,430 Z" fill="#35433b" fill-opacity="0.75" />
+
+    <!-- 4 Extended Vertical Fingers -->
+    <rect x="366" y="325" width="28" height="110" rx="14" fill="#35433b" fill-opacity="0.75" />
+    <rect x="400" y="308" width="28" height="122" rx="14" fill="#35433b" fill-opacity="0.75" />
+    <rect x="434" y="320" width="28" height="110" rx="14" fill="#35433b" fill-opacity="0.75" />
+    <rect x="468" y="350" width="26" height="80" rx="13" fill="#35433b" fill-opacity="0.75" />
+
+    <!-- Palm & Wrist Base Fill -->
+    <path d="M 345,420 C 345,420 375,425 382,430 L 492,430 C 498,460 485,495 475,530 L 375,530 C 365,495 355,460 345,420 Z" fill="#35433b" fill-opacity="0.75" />
+  </g>
+
+  <!-- RIGHT SIDE TYPOGRAPHY -->
+  <g transform="translate(580, 315)">
+    <!-- Main Title "ROSHAMBO" -->
+    <text x="0" y="0" 
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-weight="900" 
+          font-size="112" 
+          fill="#ffffff" 
+          letter-spacing="2.5">ROSHAMBO</text>
+
+    <!-- Tagline "Many agents throw. Only one can win." -->
+    <text x="4" y="68" 
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-weight="700" 
+          font-size="34" 
+          fill="#00e676" 
+          letter-spacing="0.1">Many agents throw. Only one can win.</text>
+  </g>
+</svg>
