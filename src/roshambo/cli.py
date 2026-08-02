@@ -20,6 +20,32 @@ from .models import Claim
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    # `--json` is accepted both before the subcommand (`roshambo --json status`, the
+    # only form that worked before this fix) and after it (`roshambo status --json`,
+    # matching every subcommand's own flags and the form people actually type first).
+    # Plain argparse gives a top-level optional to the top-level parser only, so
+    # `status --json` failed with "unrecognized arguments: --json" and exit code 2 --
+    # the same flag-position trap already documented for `--resource` on
+    # `heartbeat`/`release` in docs/NEXT-RUN.md, just unnoticed here because no test
+    # exercised `--json` at all.
+    #
+    # The naive fix -- give every subparser the same `--json` via a shared `parents=`
+    # parent -- reintroduces a *different* bug: `argparse.ArgumentParser.parse_args`
+    # always merges a subparser's own namespace over the top-level one
+    # (`_SubParsersAction.__call__`), so a subparser's default (False) silently
+    # clobbers a `--json` already parsed before the subcommand, e.g.
+    # `roshambo --json status` would parse but come back `json=False`. Giving the
+    # subparser copy `default=SUPPRESS` avoids that: when `--json` is absent from the
+    # subcommand's own arguments, argparse never adds a `json` key to the subparser's
+    # namespace at all, so there is nothing to overwrite the top-level value with.
+    json_parent = argparse.ArgumentParser(add_help=False)
+    json_parent.add_argument(
+        "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="machine-readable output where applicable",
+    )
+
     parser = argparse.ArgumentParser(
         prog="roshambo",
         description=(
@@ -32,7 +58,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_init = sub.add_parser("init-schema", help="create tables and vector indexes")
+    p_init = sub.add_parser(
+        "init-schema", help="create tables and vector indexes", parents=[json_parent]
+    )
     p_init.add_argument("--schema", help="path to 001_init.sql (default: auto-detect)")
     p_init.add_argument(
         "--repair-vector-indexes",
@@ -43,11 +71,12 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
 
-    sub.add_parser("status", help="counters for the configured swarm")
+    sub.add_parser("status", help="counters for the configured swarm", parents=[json_parent])
 
     p_register = sub.add_parser(
         "register-agent",
         help="register a stable agent identity with framework and host",
+        parents=[json_parent],
     )
     p_register.add_argument("--agent-id", required=True)
     p_register.add_argument("--framework", required=True)
@@ -58,7 +87,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="JSON object describing capabilities (default: {})",
     )
 
-    p_claim = sub.add_parser("claim", help="take an exclusive lease on a resource")
+    p_claim = sub.add_parser(
+        "claim", help="take an exclusive lease on a resource", parents=[json_parent]
+    )
     p_claim.add_argument("resource")
     p_claim.add_argument("--agent-id", required=True)
     p_claim.add_argument("--intent", required=True)
@@ -69,16 +100,24 @@ def _build_parser() -> argparse.ArgumentParser:
     # follow that: the verb was exposed on neither the CLI nor MCP. In the field run
     # `starmap-2026-07-27` every lease therefore ran on its TTL alone, and three
     # lapsed mid-task and were re-granted.
-    p_heartbeat = sub.add_parser("heartbeat", help="keep a lease alive while still working")
+    p_heartbeat = sub.add_parser(
+        "heartbeat", help="keep a lease alive while still working", parents=[json_parent]
+    )
     p_heartbeat.add_argument("claim_id")
 
-    p_release = sub.add_parser("release", help="hand a lease back")
+    p_release = sub.add_parser(
+        "release", help="hand a lease back", parents=[json_parent]
+    )
     p_release.add_argument("claim_id")
 
-    p_who = sub.add_parser("who-has", help="show the current holder of a resource")
+    p_who = sub.add_parser(
+        "who-has", help="show the current holder of a resource", parents=[json_parent]
+    )
     p_who.add_argument("resource")
 
-    p_remember = sub.add_parser("remember", help="record an attempt and its outcome")
+    p_remember = sub.add_parser(
+        "remember", help="record an attempt and its outcome", parents=[json_parent]
+    )
     p_remember.add_argument("topic")
     p_remember.add_argument("--approach", required=True)
     p_remember.add_argument(
@@ -89,7 +128,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p_remember.add_argument("--evidence", required=True)
     p_remember.add_argument("--agent-id", default=None)
 
-    p_recall = sub.add_parser("recall", help="find prior attempts close to a query")
+    p_recall = sub.add_parser(
+        "recall", help="find prior attempts close to a query", parents=[json_parent]
+    )
     p_recall.add_argument("query")
     p_recall.add_argument("--limit", type=int, default=5)
     p_recall.add_argument(
@@ -100,7 +141,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="restrict to these outcomes (repeatable)",
     )
 
-    p_decide = sub.add_parser("decide", help="record a decision with provenance")
+    p_decide = sub.add_parser(
+        "decide", help="record a decision with provenance", parents=[json_parent]
+    )
     p_decide.add_argument("question")
     p_decide.add_argument("--choice", required=True)
     p_decide.add_argument("--rationale", required=True)

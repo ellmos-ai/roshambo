@@ -18,6 +18,58 @@ tagged git release (no `git tag`); the `[x.y.z]` headings below track `pyproject
   "submission video not started" lines were removed from both language variants. The
   old 0.1.0 changelog gap remains a dated historical entry, not current status.
 
+## [0.1.9] - 2026-08-02
+
+### Fixed
+
+- `roshambo <command> --json` (the flag typed *after* the subcommand, matching every
+  other subcommand flag, and the natural way to type it) failed with `argparse: error:
+  unrecognized arguments: --json` and exit code 2. `--json` was defined only on the
+  top-level parser (`src/roshambo/cli.py`), and `argparse` does not look for a
+  top-level optional once a subparser has started consuming arguments -- only
+  `roshambo --json <command>` (flag *before* the subcommand) worked. The gap was
+  invisible because `roshambo.cli` had no offline test coverage at all: the only
+  existing tests that touch it are `live`-marked and only run against a real
+  CockroachDB cluster.
+- Fixed by giving every subparser its own `--json`, via a shared
+  `argparse.ArgumentParser(add_help=False)` parent. The first fix attempted here (a
+  plain `default=False` copy on that parent) reintroduced the same bug in the other
+  direction: `argparse`'s `_SubParsersAction` always merges the chosen subparser's
+  namespace over the top-level one, so a bare `False` default on the subparser
+  silently clobbered a `--json` already parsed *before* the subcommand, turning
+  `roshambo --json status` from `json=True` back into `json=False` without raising
+  anything. The subparser copy now uses `default=argparse.SUPPRESS`, so it contributes
+  no `json` key at all -- and therefore cannot overwrite anything -- when `--json` was
+  not given on its own side.
+
+### Added
+
+- `tests/test_cli.py` (36 tests): the first offline test coverage for
+  `src/roshambo/cli.py`. Covers `--json` in both positions for every subcommand, the
+  subparser-merge regression above, missing/unknown-argument usage errors, `--help`,
+  and one end-to-end `main()` call proving argument parsing now succeeds before
+  `load_config()` raises on a missing `ROSHAMBO_DSN` (the previous bug never reached
+  that far -- `parse_args()` raised `SystemExit(2)` first).
+
+### Changed
+
+- Offline suite: 176 passed / 51 skipped (up from 140 passed / 51 skipped), all 36 new
+  from `tests/test_cli.py`; the 51 skips are unchanged and, on inspection, all
+  legitimate -- 49 are marked `live` (need `ROSHAMBO_DSN` against a real CockroachDB
+  cluster; exercised separately by `.github/workflows/ci.yml`'s `test-live` job against
+  an ephemeral Docker cluster), 1 needs real AWS/Bedrock credentials (`aws` marker,
+  intentionally never available in CI per `AGENTS.md`'s AWS boundaries), and 1 needs
+  the demo app's optional `fastapi`/`mangum` dependencies (`demo/requirements.txt`,
+  deliberately kept separate from `[dev]`). `ruff check .` clean.
+- Synchronized the `Tests` badge in `README.md` and `README_de.md`, and `llms.txt`'s
+  `Last-checked`/`Verification` line, to the count above. `README_de.md` and `llms.txt`
+  had drifted to a stale `127 passed` (`llms.txt` last updated 2026-07-31) while
+  `README.md` already read `140 passed` -- the three were mutually inconsistent before
+  this pass, not only outdated by this fix's new tests.
+- `pyproject.toml`'s `version` and `src/roshambo/__init__.py`'s `__version__` had also
+  drifted apart (`0.1.8` vs `0.1.7`, the latter unbumped since `[0.1.7]` below). Both
+  now read `0.1.9`.
+
 ## [0.1.8] - 2026-08-01
 
 ### Fixed
