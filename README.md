@@ -417,9 +417,10 @@ Two things worth knowing before you record or judge anything:
 The same app also runs as an AWS Lambda function behind a Function URL — its intended
 host — through one adapter, `demo.lambda_entry.handler`, with no second code path. That
 is why the frontend polls rather than opening a WebSocket, which a Function URL cannot
-do. It has not been deployed (no AWS account is attached yet); what is verified is that
-the handler answers Function-URL-shaped events, binary assets and query strings included
-(`tests/test_demo_lambda_entry.py`).
+do. This is exactly how the public demo linked at the top of this README is deployed
+(see [Status](#status) and [`demo/README.md`](demo/README.md#deployed)); that the
+handler answers Function-URL-shaped events, binary assets and query strings included,
+is additionally verified in `tests/test_demo_lambda_entry.py`.
 
 ### One tool, two situations
 

@@ -400,10 +400,11 @@ Zwei Dinge, die man vor einer Aufnahme oder Bewertung wissen sollte:
 
 Dieselbe Anwendung läuft auch als AWS-Lambda-Funktion hinter einer Function URL — ihrem
 vorgesehenen Host — über einen einzigen Adapter, `demo.lambda_entry.handler`, ohne zweiten
-Codepfad. Genau deshalb pollt das Frontend, statt einen WebSocket zu öffnen: eine Function
-URL kann das nicht. Deployt wurde sie nicht (es ist noch kein AWS-Konto angebunden);
-verifiziert ist, dass der Handler Function-URL-förmige Events beantwortet, samt
-Binärdateien und Query-Strings (`tests/test_demo_lambda_entry.py`).
+Codepfad. Genau so ist die oben in diesem README verlinkte öffentliche Demo deployt
+(siehe [Stand](#stand) und [`demo/README.md`](demo/README.md#deployed)); genau deshalb
+pollt das Frontend auch, statt einen WebSocket zu öffnen: eine Function URL kann das
+nicht. Dass der Handler Function-URL-förmige Events beantwortet, samt Binärdateien und
+Query-Strings, ist zusätzlich in `tests/test_demo_lambda_entry.py` verifiziert.
 
 ### Ein Werkzeug, zwei Situationen
 

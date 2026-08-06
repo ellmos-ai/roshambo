@@ -9,6 +9,12 @@ tagged git release (no `git tag`); the `[x.y.z]` headings below track `pyproject
 
 ### Documentation
 
+- Removed the stale "It has not been deployed (no AWS account is attached yet)" claim
+  from the Lambda paragraph in "See it running" (EN) and its German counterpart in
+  "In Aktion sehen" — the demo has been live behind a public Function URL since
+  2026-07-31, as the top of the same document already stated. Both paragraphs now point
+  to the Status section and `demo/README.md#deployed` instead.
+
 - Clarified agent lock readback: the historical instruction to read a mandatory root
   `LOCK.txt` now distinguishes absent repository lock files from TaskPLAN/Lockmaster
   assignment and lane ownership. Operators must inventory locks and certify foreign work
