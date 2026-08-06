@@ -22,12 +22,12 @@ stay true:
 nothing for the lifespan protocol to carry. If one is ever added, this has to change to
 `"auto"` or the handler will never run it.
 
-**Not deployed.** No AWS account is attached to this project yet, so nothing here has run
-in Lambda. What *has* been verified is that the handler answers Function-URL-shaped
-events correctly, including a binary asset and a query string:
-`tests/test_demo_lambda_entry.py`. The parts that only a real deployment can settle --
-the psycopg manylinux wheel against the actual runtime, TLS to the cluster from a Lambda
-ENI, the cold-start budget -- are open; see `demo/README.md`.
+**Deployed since 2026-07-30** behind a public Function URL in ``eu-central-1`` (see
+`demo/README.md`, "Deployed", for what was verified about the deployment itself --
+this paragraph used to say "not deployed" and predates that). Independent of any
+deployment, the handler's contract is verified from here: it answers
+Function-URL-shaped events correctly, including a binary asset and a query string
+(`tests/test_demo_lambda_entry.py`).
 """
 
 from __future__ import annotations

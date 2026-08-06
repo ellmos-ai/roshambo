@@ -7,7 +7,29 @@ tagged git release (no `git tag`); the `[x.y.z]` headings below track `pyproject
 
 ## [Unreleased]
 
+### Added
+
+- **The live map** (`/live` + `GET /api/live`): the replay viewer's projection pointed
+  at the present -- the "CockroachDB as satellite GPS for agents" outlook from the
+  README, built. One read-only snapshot endpoint (agent roster grouped by host, active
+  claims, recent audit events -- all three reads on one connection in one serializable
+  read transaction) and one static page that polls it every 2.5 s, Function-URL
+  compatible by construction. `recall` events are filtered server-side and must stay
+  filtered: their `resource` carries a visitor's free-text search from the public
+  demo's search box, and serving them would broadcast one visitor's input to every
+  watcher (found by adversarial review before this endpoint's first deployment).
+  The roster read is bounded (100 most recently active) for the same reason every
+  other read here is. Verified in mock mode and live against the field run's swarm
+  (27 agents, two hosts); `tests/test_demo_live.py` covers the snapshot shape, the
+  recall filter, the window bounds, and the route through the Lambda adapter.
+
 ### Documentation
+
+- `demo/lambda_entry.py`'s module docstring still opened with "**Not deployed.** No
+  AWS account is attached to this project yet" -- stale since the Function URL went
+  live on 2026-07-30, and the same error family as the README's "has not been
+  deployed" paragraph removed earlier today. It now states the deployment and points
+  at `demo/README.md` for what was verified about it.
 
 - Removed the stale "It has not been deployed (no AWS account is attached yet)" claim
   from the Lambda paragraph in "See it running" (EN) and its German counterpart in

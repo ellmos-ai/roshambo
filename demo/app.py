@@ -188,6 +188,86 @@ def _mock_status() -> dict:
     return {"agents": 3, "active_claims": 1, "trails": 3, "failures": 1, "facts": 0}
 
 
+# The live map's mock roster mirrors _MOCK_CLAIMS/_MOCK_DENIALS: the Lambda worker that
+# holds the mock claim, the workstation agent that lost the race, and one more local
+# agent so a machine panel with two tokens can be seen. Hosts are what the map groups
+# by, so the mock deliberately spans two different ones.
+_MOCK_AGENTS = [
+    {
+        "agent_id": "b3f1c2b0-2222-4a11-9a2b-000000000001",
+        "framework": "aws-lambda-bedrock",
+        "host": "aws-lambda:eu-central-1:roshambo-worker",
+        "display_name": "lambda-worker-1",
+        "registered_at": (_MOCK_NOW - timedelta(minutes=9)).isoformat(),
+        "last_heartbeat": (_MOCK_NOW - timedelta(seconds=12)).isoformat(),
+    },
+    {
+        "agent_id": "c4e2d3c1-3333-4b22-8b3c-000000000003",
+        "framework": "local-cli-agent",
+        "host": "local-workstation-mock01",
+        "display_name": "cli-agent-a",
+        "registered_at": (_MOCK_NOW - timedelta(minutes=7)).isoformat(),
+        "last_heartbeat": (_MOCK_NOW - timedelta(seconds=5)).isoformat(),
+    },
+    {
+        "agent_id": "d5f3e4d2-4444-4c33-9c4d-000000000004",
+        "framework": "local-cli-agent",
+        "host": "local-workstation-mock01",
+        "display_name": "cli-agent-b",
+        "registered_at": (_MOCK_NOW - timedelta(minutes=4)).isoformat(),
+        "last_heartbeat": (_MOCK_NOW - timedelta(minutes=3)).isoformat(),
+    },
+]
+
+_MOCK_EVENTS = [
+    {
+        "created_at": (_MOCK_NOW - timedelta(minutes=4, seconds=10)).isoformat(),
+        "agent_id": "d5f3e4d2-4444-4c33-9c4d-000000000004",
+        "verb": "register_agent",
+        "resource": None,
+        "allowed": True,
+        "reason": None,
+    },
+    {
+        "created_at": (_MOCK_NOW - timedelta(seconds=40)).isoformat(),
+        "agent_id": "b3f1c2b0-2222-4a11-9a2b-000000000001",
+        "verb": "claim",
+        "resource": _MOCK_CLAIMS[0]["resource"],
+        "allowed": True,
+        "reason": None,
+    },
+    {
+        "created_at": (_MOCK_NOW - timedelta(seconds=39)).isoformat(),
+        "agent_id": "c4e2d3c1-3333-4b22-8b3c-000000000003",
+        "verb": "claim",
+        "resource": _MOCK_CLAIMS[0]["resource"],
+        "allowed": False,
+        "reason": "held by b3f1c2b0-2222-4a11-9a2b-000000000001 "
+        "(apply the pending billing schema migration)",
+    },
+    {
+        "created_at": (_MOCK_NOW - timedelta(seconds=38)).isoformat(),
+        "agent_id": "c4e2d3c1-3333-4b22-8b3c-000000000003",
+        "verb": "remember",
+        "resource": "trail:migrate billing schema",
+        "allowed": True,
+        "reason": None,
+    },
+    # Never served: /api/live filters `recall` in both modes, because a live recall
+    # event's `resource` is a visitor's free-text search from the public demo's search
+    # box (see demo/queries.py:recent_events). This row exists so the filter is
+    # exercised by tests/test_demo_live.py rather than trusted.
+    {
+        "created_at": (_MOCK_NOW - timedelta(seconds=20)).isoformat(),
+        "agent_id": None,
+        "verb": "recall",
+        "resource": "a visitor's search text -- must never reach /live watchers",
+        "allowed": True,
+        "reason": None,
+    },
+]
+
+
 # ------------------------------------------------------------------------ API
 
 
@@ -291,6 +371,63 @@ def api_recall(
     return {"mode": backend.mode, "query": query, "hits": results}
 
 
+@app.get("/api/live")
+def api_live(events: int = Query(40, ge=1, le=200)) -> dict[str, Any]:
+    """One snapshot for the live map (``/live``): roster, active claims, and the
+    most recent audit events, in a single response.
+
+    One endpoint instead of three polls on purpose: the map redraws from a snapshot,
+    and on a Lambda Function URL every poll is a billed invocation. The three reads
+    share **one** connection and one read transaction (``autocommit=False`` --
+    CockroachDB runs it serializable, so roster, claims and events describe the same
+    moment); the ``counters`` block alone comes from ``status()`` on the backend's
+    own connection and may trail the snapshot by an instant. Read-only, no free-form
+    parameters beyond the event-window size. ``recall`` events never appear here --
+    see ``demo/queries.py:recent_events`` for why that filter is load-bearing.
+    """
+    if backend.mode == "live":
+        from demo.queries import active_claims, agents_roster, recent_events
+        from roshambo.db import connect
+
+        try:
+            s = backend.roshambo.status()
+            with connect(backend.cfg, autocommit=False) as conn:
+                roster = agents_roster(backend.cfg, conn=conn)
+                claims = active_claims(backend.cfg, conn=conn)
+                event_rows = recent_events(backend.cfg, limit=events, conn=conn)
+                conn.rollback()  # read-only transaction; release the timestamp
+            payload: dict[str, Any] = {
+                "swarm_id": backend.cfg.swarm_id,
+                "counters": {
+                    "agents": s.agents,
+                    "active_claims": s.active_claims,
+                    "trails": s.trails,
+                    "failures": s.failures,
+                    "facts": s.facts,
+                },
+                "agents": roster,
+                "claims": claims,
+                "events": event_rows,
+            }
+        except Exception as exc:
+            backend.refresh()
+            raise HTTPException(status_code=503, detail=f"live snapshot failed: {exc}") from exc
+    else:
+        payload = {
+            "swarm_id": "mock-swarm",
+            "counters": _mock_status(),
+            "agents": _MOCK_AGENTS,
+            "claims": _MOCK_CLAIMS,
+            "events": [e for e in _MOCK_EVENTS if e["verb"] != "recall"][-events:],
+        }
+    return {
+        "mode": backend.mode,
+        "detail": backend.detail,
+        "now": datetime.now(timezone.utc).isoformat(),
+        **payload,
+    }
+
+
 @app.get("/api/health")
 def api_health() -> dict[str, Any]:
     return {"mode": backend.mode, "detail": backend.detail}
@@ -303,6 +440,10 @@ if STATIC_DIR.is_dir():
     @app.get("/")
     def index() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html")
+
+    @app.get("/live")
+    def live_map() -> FileResponse:
+        return FileResponse(STATIC_DIR / "live.html")
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 

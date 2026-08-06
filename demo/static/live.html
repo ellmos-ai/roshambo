@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roshambo — live map</title>
+<!-- The live map: the replay viewer's visual language (ellmos-ai/roshambo-starmap,
+     replay/index.html), pointed at the present instead of the past. One data source,
+     GET api/live, polled — a Function URL cannot do WebSockets, and the whole app
+     polls by design (see demo/lambda_entry.py). Every URL here is relative for the
+     same reason as everywhere else in this frontend. -->
+<link rel="icon" type="image/png" href="assets/roshambo-favicon.png">
+<style>
+  html,body{margin:0;padding:0;background:#0b0e14;color:#dfe6f0;font-family:"Segoe UI",Arial,sans-serif;
+    min-height:100vh;background:radial-gradient(1200px 500px at 50% -100px,#14203a 0%,#0b0e14 60%);}
+  a{color:#8fb4e8;}
+  #top{display:flex;align-items:center;gap:18px;padding:14px 24px 6px;flex-wrap:wrap;}
+  #top h1{font-size:22px;margin:0;font-weight:600;}
+  #top .sub{color:#8fa3c8;font-size:13px;}
+  #clock{margin-left:auto;font-size:16px;font-variant-numeric:tabular-nums;color:#bcd0ee;}
+  #modeBanner{display:none;background:#5a4a12;color:#ffe9a8;border:1px solid #8a7326;border-radius:8px;
+    padding:6px 14px;font-size:13px;margin:6px 24px;}
+  #errBanner{display:none;background:#5a1a1a;color:#ffc4c4;border:1px solid #8a2626;border-radius:8px;
+    padding:6px 14px;font-size:13px;margin:6px 24px;}
+  #judgeWrap{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:120px;}
+  #judge{position:relative;width:56px;height:56px;}
+  #judge .ring{position:absolute;inset:0;border-radius:50%;border:3px solid #37b6a8;opacity:.25;
+    transition:transform .3s,opacity .3s;}
+  #judge .core{position:absolute;inset:9px;border-radius:50%;background:#123b36;display:flex;
+    align-items:center;justify-content:center;border:2px solid #37b6a8;}
+  #judgeLbl{font-size:11px;color:#6fd6c8;white-space:nowrap;}
+  #counters{display:flex;gap:14px;font-size:12px;color:#8fa3c8;flex-wrap:wrap;}
+  #counters b{color:#dfe6f0;font-variant-numeric:tabular-nums;}
+  #main{display:flex;gap:16px;padding:8px 24px 24px;align-items:flex-start;flex-wrap:wrap;}
+  #hosts{flex:2 1 560px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;}
+  .hostPanel{border:1px solid #2a3550;border-radius:10px;background:rgba(18,24,38,.55);
+    padding:8px 10px 12px;flex:1 1 260px;min-width:250px;}
+  .hostPanel h3{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8fa3c8;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tokens{display:flex;flex-wrap:wrap;gap:10px 6px;}
+  .token{width:118px;text-align:center;position:relative;}
+  .token .disc{width:28px;height:28px;border-radius:50%;margin:0 auto;display:flex;align-items:center;
+    justify-content:center;font-size:11px;font-weight:700;color:#0b0e14;border:2px solid rgba(255,255,255,.25);
+    transition:box-shadow .3s,border-color .3s;}
+  .token .nm{font-size:10px;color:#aebcd6;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .token .hb{font-size:9px;color:#5f7295;}
+  .token.quiet{opacity:.45;}
+  .token.win .disc{box-shadow:0 0 14px 4px #35d06a;border-color:#35d06a;}
+  .token.lose .disc{box-shadow:0 0 14px 4px #e04848;border-color:#e04848;}
+  .claimChip{margin:3px auto 0;max-width:112px;border:2px solid #33436b;border-radius:5px;background:#131b2e;
+    font-size:9px;padding:1px 4px;color:#aebcd6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .claimChip .exp{color:#e8d27a;font-variant-numeric:tabular-nums;}
+  #feedPanel{flex:1 1 380px;border:1px solid #2a3550;border-radius:10px;background:rgba(18,24,38,.55);
+    max-width:560px;}
+  #feedPanel h3{position:relative;z-index:2;background:rgba(18,24,38,.92);margin:0;border-radius:10px 10px 0 0;
+    padding:8px 10px 4px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8fa3c8;}
+  #feedLines{padding:6px 10px 10px;font-size:12.5px;line-height:1.5;min-height:200px;max-height:520px;
+    overflow-y:auto;}
+  #feedLines div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#c4d2e8;}
+  #feedLines .tm{color:#5f7295;margin-right:6px;font-variant-numeric:tabular-nums;}
+  #claimsPanel{flex:1 1 300px;border:1px solid #2a3550;border-radius:10px;background:rgba(18,24,38,.55);
+    padding:8px 10px 12px;max-width:460px;}
+  #claimsPanel h3{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8fa3c8;}
+  .claimRow{font-size:11.5px;color:#c4d2e8;margin:5px 0;line-height:1.35;}
+  .claimRow .res{color:#e8d27a;}
+  .claimRow .who{font-weight:600;}
+  #foot{padding:0 24px 18px;font-size:11.5px;color:#5f7295;}
+</style>
+</head>
+<body>
+<div id="top">
+  <div>
+    <h1>Roshambo — live map</h1>
+    <div class="sub">who is working where, on what, right now · swarm <b id="swarm">—</b>
+      · <a href="./">dashboard</a></div>
+  </div>
+  <div id="judgeWrap">
+    <div id="judge"><div class="ring" id="judgeRing"></div><div class="core">
+      <svg width="26" height="26" viewBox="0 0 40 40"><ellipse cx="20" cy="9" rx="13" ry="5" fill="none" stroke="#6fd6c8" stroke-width="2"/><path d="M7 9 v22 c0 2.8 5.8 5 13 5 s13 -2.2 13 -5 V9" fill="none" stroke="#6fd6c8" stroke-width="2"/><path d="M7 20 c0 2.8 5.8 5 13 5 s13 -2.2 13 -5" fill="none" stroke="#6fd6c8" stroke-width="2"/></svg>
+    </div></div>
+    <div id="judgeLbl">the judge · CockroachDB</div>
+  </div>
+  <div id="counters">
+    <span>agents <b id="cAgents">–</b></span>
+    <span>active claims <b id="cClaims">–</b></span>
+    <span>trails <b id="cTrails">–</b></span>
+    <span>failures <b id="cFails">–</b></span>
+  </div>
+  <div id="clock">—</div>
+</div>
+<div id="modeBanner">MOCK MODE — no live CockroachDB cluster connected. Example data only.</div>
+<div id="errBanner"></div>
+<div id="main">
+  <div id="hosts"></div>
+  <div id="claimsPanel"><h3>active claims</h3><div id="claimRows"></div></div>
+  <div id="feedPanel"><h3>live feed</h3><div id="feedLines"></div></div>
+</div>
+<div id="foot">Read-only view over the same tables everything else uses: the roster from
+<code>agents</code>, leases from <code>claims</code>, the feed from the append-only
+<code>audit_log</code>. Polls <code>api/live</code> every 2.5&nbsp;s — a Function URL
+cannot hold a socket open, and it does not need to.</div>
+<script>
+"use strict";
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const short = aid => { const s = String(aid ?? "?"); const base = s.split("@")[0];
+  return /^[0-9a-f-]{36}$/i.test(base) ? base.slice(0, 8) : base; };
+const hostTag = aid => String(aid ?? "").includes("@") ? "@" + String(aid).split("@")[1] : "";
+
+// Vendor colours follow the replay's palette; unknown frameworks get a stable
+// hash-derived hue so two of them never silently share a colour by accident.
+const FW_COLORS = [
+  [/claude/i, "#e08a4a"], [/codex|openai/i, "#c9c9c9"], [/gemini|antigravity|agy|google/i, "#4a90e2"],
+  [/kimi|moonshot/i, "#35d06a"], [/glm|zhipu/i, "#b8b8c8"], [/minimax/i, "#c05a5a"],
+  [/bot|script/i, "#e8d27a"], [/lambda|aws/i, "#37b6a8"],
+];
+function fwColor(fw) {
+  for (const [re, c] of FW_COLORS) if (re.test(fw || "")) return c;
+  let h = 0; for (const ch of String(fw || "?")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `hsl(${h % 360} 55% 62%)`;
+}
+const fwIcon = fw => (String(fw || "??").replace(/[^a-z0-9]/gi, "").slice(0, 2) || "??").toUpperCase();
+
+function fmtEvent(e) {
+  const who = `<b>${esc(short(e.agent_id))}</b>${esc(hostTag(e.agent_id))}`;
+  if (e.verb === "register_agent") return `${who} joins the swarm`;
+  if (e.verb === "claim" && e.allowed) return `${who} takes <i>${esc(e.resource)}</i>`;
+  if (e.verb === "claim") {
+    const m = /held by (\S+)/.exec(e.reason || "");
+    return m ? `${who} was refused by ${esc(short(m[1]))}` : `${who} was refused`;
+  }
+  if (e.verb === "release") return `${who} releases its lease`;
+  if (e.verb === "heartbeat") return `${who} heartbeats`;
+  if (e.verb === "remember") return `${who} leaves a trail: ${esc(e.resource || "")}`;
+  // no `recall` branch on purpose: the server never sends recall events, because a
+  // recall's resource is a visitor's free-text search (demo/queries.py:recent_events)
+  if (e.verb === "decide") return `${who} logs a decision`;
+  return `${who} ${esc(e.verb)}`;
+}
+
+const el = id => document.getElementById(id);
+let lastSig = "";
+
+function render(d) {
+  el("swarm").textContent = d.swarm_id;
+  el("clock").textContent = (d.now || "").slice(11, 19) + " UTC";
+  el("modeBanner").style.display = d.mode === "live" ? "none" : "block";
+  const c = d.counters || {};
+  el("cAgents").textContent = c.agents ?? "–";
+  el("cClaims").textContent = c.active_claims ?? "–";
+  el("cTrails").textContent = c.trails ?? "–";
+  el("cFails").textContent = c.failures ?? "–";
+
+  const now = Date.parse(d.now || "") || Date.now();
+
+  // conflict flashes: denials/grants in the last 4 s of server time
+  const win = new Set(), lose = new Set();
+  for (const e of d.events || []) {
+    if (e.verb !== "claim") continue;
+    const t = Date.parse(e.created_at);
+    if (!(now - t < 4000)) continue;
+    if (e.allowed) win.add(e.agent_id);
+    else {
+      lose.add(e.agent_id);
+      const m = /held by (\S+)/.exec(e.reason || "");
+      if (m) win.add(m[1]);
+    }
+  }
+
+  // claims per agent
+  const claimsBy = {};
+  for (const cl of d.claims || []) (claimsBy[cl.agent_id] = claimsBy[cl.agent_id] || []).push(cl);
+
+  // hosts -> panels (only rebuild when the shape changes; flashes update in place)
+  const hosts = {};
+  for (const a of d.agents || []) (hosts[a.host || "unknown host"] = hosts[a.host || "unknown host"] || []).push(a);
+  const sig = JSON.stringify([Object.keys(hosts).sort(),
+    (d.agents || []).map(a => a.agent_id + (claimsBy[a.agent_id] || []).map(x => x.resource).join()),
+    Date.parse(d.now || 0) - (Date.parse(d.now || 0) % 30000)]);
+  if (sig !== lastSig) {
+    lastSig = sig;
+    const wrap = el("hosts");
+    wrap.innerHTML = "";
+    for (const host of Object.keys(hosts).sort()) {
+      const panel = document.createElement("div");
+      panel.className = "hostPanel";
+      panel.innerHTML = `<h3 title="${esc(host)}">${esc(host)}</h3>`;
+      const tk = document.createElement("div"); tk.className = "tokens";
+      for (const a of hosts[host]) {
+        const t = document.createElement("div");
+        t.className = "token"; t.dataset.aid = a.agent_id;
+        const quiet = now - Date.parse(a.last_heartbeat || 0) > 15 * 60 * 1000;
+        if (quiet) t.classList.add("quiet");
+        const label = a.display_name || short(a.agent_id);
+        let chips = "";
+        for (const cl of claimsBy[a.agent_id] || []) {
+          const expIn = Math.max(0, Math.round((Date.parse(cl.expires_at) - now) / 1000));
+          chips += `<div class="claimChip" style="border-color:${fwColor(a.framework)}"
+            title="${esc(cl.resource)} — ${esc(cl.intent)}">${esc(cl.resource)}
+            <span class="exp">${expIn}s</span></div>`;
+        }
+        t.innerHTML = `<div class="disc" style="background:${fwColor(a.framework)}">${fwIcon(a.framework)}</div>
+          <div class="nm" title="${esc(a.agent_id)}">${esc(label)}</div>
+          <div class="hb">${esc(a.framework || "")}</div>${chips}`;
+        tk.appendChild(t);
+      }
+      panel.appendChild(tk);
+      wrap.appendChild(panel);
+    }
+  }
+  document.querySelectorAll(".token").forEach(t => {
+    t.classList.toggle("win", win.has(t.dataset.aid));
+    t.classList.toggle("lose", lose.has(t.dataset.aid));
+  });
+
+  // judge pulse: events in the last 3 s
+  let pulse = 0;
+  for (const e of d.events || []) if (now - Date.parse(e.created_at) < 3000) pulse++;
+  const ring = el("judgeRing");
+  ring.style.transform = `scale(${1 + Math.min(pulse, 6) * 0.08})`;
+  ring.style.opacity = Math.min(0.25 + pulse * 0.15, 1);
+
+  // active claims table
+  el("claimRows").innerHTML = (d.claims || []).map(cl => {
+    const label = cl.display_name || short(cl.agent_id);
+    return `<div class="claimRow"><span class="who">${esc(label)}</span>
+      <span style="color:#5f7295">(${esc(cl.framework || "?")} · ${esc(cl.host || "?")})</span><br>
+      holds <span class="res">${esc(cl.resource)}</span> — ${esc(cl.intent)}</div>`;
+  }).join("") || `<div class="claimRow" style="color:#5f7295">no active claims right now</div>`;
+
+  // feed
+  el("feedLines").innerHTML = (d.events || []).map(e =>
+    `<div><span class="tm">${esc((e.created_at || "").slice(11, 19))}</span>${fmtEvent(e)}</div>`
+  ).join("");
+  const f = el("feedLines"); f.scrollTop = f.scrollHeight;
+}
+
+async function poll() {
+  try {
+    const r = await fetch("api/live", { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    render(await r.json());
+    el("errBanner").style.display = "none";
+  } catch (err) {
+    const b = el("errBanner");
+    b.textContent = `connection lost, retrying — ${err.message || err}`;
+    b.style.display = "block";
+  }
+}
+poll();
+setInterval(poll, 2500);
+</script>
+</body>
+</html>
