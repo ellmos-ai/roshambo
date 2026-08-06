@@ -31,6 +31,12 @@ serialisierbare Transaktion in CockroachDB.
 > Authentifizierung (siehe [„Not built here" in demo/README.md](demo/README.md#not-built-here));
 > er gibt keine Zugangsdaten preis, nur Roshambos eigene Koordinationsdaten.
 > Deploy-Details: `infra/deploy_demo_lambda.py`, [`demo/README.md`](demo/README.md#deployed).
+>
+> **[Die Live-Karte →](https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/live)**
+> Die Projektion des Replay-Viewers auf die Gegenwart gerichtet: Agenten nach Host
+> gruppiert, aktive Leases als Chips bei ihren Haltern, das `audit_log` als Live-Feed —
+> ein read-only Snapshot-Endpunkt (`/api/live`), per Polling gelesen. Das
+> „Satelliten-GPS für Agenten" aus dem Ausblick des englischen README, gebaut.
 
 ![Roshambo-Demo-Webanwendung: ein dunkel gestaltetes Dashboard mit Swarm-ID, Zählern für Agenten/Claims/Trails, einer Active-Claims-Tabelle mit einem von mcp-agent gehaltenen Lease, einer Turned-Away-Tabelle mit zwei weiteren Agenten, denen mitgeteilt wurde, wer die Ressource hält und woran gearbeitet wird, sowie einem Recall-Suchfeld](docs/screenshots/01-collision.png)
 

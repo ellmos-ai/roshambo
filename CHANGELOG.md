@@ -22,6 +22,13 @@ tagged git release (no `git tag`); the `[x.y.z]` headings below track `pyproject
   other read here is. Verified in mock mode and live against the field run's swarm
   (27 agents, two hosts); `tests/test_demo_live.py` covers the snapshot shape, the
   recall filter, the window bounds, and the route through the Lambda adapter.
+  Deployed to the public `roshambo-demo` Function URL on 2026-08-06 (code + config
+  update of the existing function, same runtime/memory/concurrency posture); the
+  four `demo/run_story.py` beats were played once against the `demo` swarm so the
+  public map shows a populated roster and feed rather than an empty stage. One
+  deploy-tooling lesson hit on the way: a `ROSHAMBO_DSN` whose `sslrootcert` points
+  at a local path is preserved as-is by `_ensure_sslrootcert` and briefly sent the
+  deployed function into mock mode until redeployed with the parameter stripped.
 
 ### Documentation
 

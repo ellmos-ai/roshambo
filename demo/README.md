@@ -39,6 +39,27 @@ The recall search is deep-linkable: `/?query=…&outcomes=failure&limit=5` fills
 form in and runs the search on load, which is how the screenshots in
 `docs/screenshots/` were taken and how a beat can be replayed for a recording.
 
+## The live map (`/live`)
+
+`GET /live` serves a second page: the evidence repository's replay viewer
+([ellmos-ai/roshambo-starmap](https://github.com/ellmos-ai/roshambo-starmap),
+`replay/`) as a projection of the *present* — agents grouped by host into machine
+panels, active leases as chips on their holders, denials flashing on both parties,
+and the `audit_log` as a live feed. It polls one read-only snapshot endpoint,
+`GET /api/live` (roster + active claims + recent events, all three reads on one
+connection in one serializable read transaction), every 2.5 s.
+
+Two properties are load-bearing, not cosmetic:
+
+* **`recall` events never appear in the feed.** A recall's audit row carries the
+  caller's free-text query as its `resource`, and this app's own search box lets any
+  anonymous visitor trigger one — serving those rows would broadcast one visitor's
+  search text to every watcher of the map. The filter lives server-side in
+  `demo/queries.py:recent_events`; `tests/test_demo_live.py` pins it.
+* **The roster read is bounded** (100 most recently active agents, stable
+  registration order) — `agents` has no retention, and this feeds an
+  unauthenticated endpoint polled every few seconds.
+
 ## The collision demo
 
 ```bash

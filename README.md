@@ -33,6 +33,12 @@ is decided by a serializable transaction in CockroachDB.
 > `infra/deploy_demo_lambda.py`,
 > [`demo/README.md`](demo/README.md#deployed).
 >
+> **[The live map →](https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/live)**
+> the replay viewer's projection pointed at the present: agents grouped by host,
+> active leases as chips on their holders, the `audit_log` as a live feed. One
+> read-only snapshot endpoint (`/api/live`), polled — the "satellite GPS for agents"
+> from [What's next](#whats-next), built.
+>
 > **[Watch the field run →](https://github.com/ellmos-ai/roshambo-starmap)** 27 agents
 > from five vendors on two machines built an invented star chart under lease
 > discipline — 1,226 collisions, never two winners. The evidence repository includes a
@@ -51,6 +57,7 @@ is decided by a serializable transaction in CockroachDB.
 | Video (2:58) | <https://youtu.be/m8VzkPrJWHI> |
 | Evidence repo (MIT) | <https://github.com/ellmos-ai/roshambo-starmap> |
 | Live demo (AWS Lambda) | <https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/> |
+| Live map (agent GPS) | <https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/live> |
 | Run replay (online) | <https://ellmos-ai.github.io/roshambo-starmap/replay/> |
 | Planetarium (online) | <https://ellmos-ai.github.io/roshambo-starmap/planetarium.html> |
 | lock-master (predecessor) | <https://github.com/dev-bricks/lock-master> |
@@ -593,14 +600,17 @@ as features:
 
 ![CockroachDB as satellite GPS for local agents — who works where, on what, right now](assets/banner-gps-outlook.png)
 
-- **CockroachDB as satellite GPS for agents.** The `claims` table already knows *who*
-  works *where* (host snapshot) on *what* (resource + intent) and for *how long*
-  (expiry, heartbeat). A "GPS" for a local fleet is a read view over that same data —
-  a live map of every agent on every machine, without any agent knowing the others
-  exist. The first step exists: the
-  [replay view](https://ellmos-ai.github.io/roshambo-starmap/replay/) built for the
-  submission video turns any swarm's `audit_log` back into a watchable game; turning
-  it from replay to live tracking is a projection change, not a schema change.
+- **CockroachDB as satellite GPS for agents — now built.** The `claims` table already
+  knows *who* works *where* (host snapshot) on *what* (resource + intent) and for
+  *how long* (expiry, heartbeat). A "GPS" for a local fleet is a read view over that
+  same data — and it turned out to be exactly the projection change this paragraph
+  predicted, not a schema change: the
+  [live map](https://xo7te46ion5mhwi6mhua6va7im0cotkk.lambda-url.eu-central-1.on.aws/live)
+  is deployed as part of the demo app (`/live`, one read-only snapshot endpoint),
+  sibling to the [replay view](https://ellmos-ai.github.io/roshambo-starmap/replay/)
+  built for the submission video, which turns any swarm's `audit_log` back into a
+  watchable game after the fact. Still open on this line: per-agent presence beyond
+  heartbeat recency, and a fleet-wide view across swarms.
 - **Agents spawned from AWS — building alongside, not just watching.**
   `roshambo-worker` (the Lambda handler implementing claim → recall → work →
   remember → release) is packaged and IAM-scripted but not yet deployed — see the
